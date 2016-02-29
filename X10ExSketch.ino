@@ -15,6 +15,7 @@
 /* along with this library. If not, see <http://www.gnu.org/licenses/>. */
 /*                                                                      */
 /* Written by Thomas Mittet (code@lookout.no) November 2010.            */
+/* Updated by Rodney Wimbery (rodney.wimberly@gmail.com) February 2016	*/	
 /************************************************************************/
 
 #include "X10ex.h"
