@@ -86,10 +86,24 @@ extern "C" void __cxa_pure_virtual() {;}
 #define portInputRegister(P)
 #define portModeRegister(P)
 #include <..\X10ExSketch\X10ExSketch.ino>
+#include <..\X10ExSketch\DHT.cpp>
+#include <..\X10ExSketch\DHT.h>
+#include <..\X10ExSketch\DS3231.cpp>
+#include <..\X10ExSketch\DS3231.h>
+#include <..\X10ExSketch\HW_AVR.h>
+#include <..\X10ExSketch\HW_AVR_defines.h>
+#include <..\X10ExSketch\RF24.cpp>
+#include <..\X10ExSketch\RF24.h>
+#include <..\X10ExSketch\RF24_config.h>
+#include <..\X10ExSketch\X10ExSketch.h>
+#include <..\X10ExSketch\X10Wireless.cpp>
+#include <..\X10ExSketch\X10Wireless.h>
 #include <..\X10ExSketch\X10ex.cpp>
 #include <..\X10ExSketch\X10ex.h>
 #include <..\X10ExSketch\X10ir.cpp>
 #include <..\X10ExSketch\X10ir.h>
 #include <..\X10ExSketch\X10rf.cpp>
 #include <..\X10ExSketch\X10rf.h>
+#include <..\X10ExSketch\nRF24L01.h>
+#include <..\X10ExSketch\printf.h>
 #endif

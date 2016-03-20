@@ -24,6 +24,18 @@
     <ClCompile Include="X10rf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RF24.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DHT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DS3231.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="X10Wireless.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="X10ex.h">
@@ -33,6 +45,36 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="X10rf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nRF24L01.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="printf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RF24.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RF24_config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DHT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DS3231.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HW_AVR.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HW_AVR_defines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="X10Wireless.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="X10ExSketch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="__vm\.X10ExSketch.vsarduino.h">

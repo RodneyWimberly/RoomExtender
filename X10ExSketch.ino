@@ -1,250 +1,246 @@
-/************************************************************************/
-/* X10 PLC, RF, IR library test sketch with REST & JSON support, v1.6.  */
-/*                                                                      */
-/* This library is free software: you can redistribute it and/or modify */
-/* it under the terms of the GNU General Public License as published by */
-/* the Free Software Foundation, either version 3 of the License, or    */
-/* (at your option) any later version.                                  */
-/*                                                                      */
-/* This library is distributed in the hope that it will be useful, but  */
-/* WITHOUT ANY WARRANTY; without even the implied warranty of           */
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU     */
-/* General Public License for more details.                             */
-/*                                                                      */
-/* You should have received a copy of the GNU General Public License    */
-/* along with this library. If not, see <http://www.gnu.org/licenses/>. */
-/*                                                                      */
-/* Written by Thomas Mittet (code@lookout.no) November 2010.            */
-/* Updated by Rodney Wimbery (rodney.wimberly@gmail.com) February 2016	*/	
-/************************************************************************/
+/****************************************************************************/
+/* X10 PLC, RF, IR library w/ nRF24L01+ 2.4 GHz Wireless Transceiver Support*/
+/* I have only tested this on the PSC05 X10 PowerLine Interface (PLC).		*/
+/****************************************************************************/
+/* This library is free software: you can redistribute it and/or modify		*/
+/* it under the terms of the GNU General Public License as published by		*/
+/* the Free Software Foundation, either version 3 of the License, or		*/                            
+/* (at your option) any later version.										*/
+/*																			*/
+/* This library is distributed in the hope that it will be useful, but		*/
+/* WITHOUT ANY WARRANTY; without even the implied warranty of				*/
+/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU			*/
+/* General Public License for more details.									*/
+/*																			*/
+/* You should have received a copy of the GNU General Public License		*/
+/* along with this library. If not, see <http://www.gnu.org/licenses/>.		*/
+/*																			*/
+/* Written by Thomas Mittet (code@lookout.no) November 2010.				*/
+/* Updated by Rodney Wimbery (rodney.wimberly@gmail.com) February 2016		*/
+/****************************************************************************/
 
-#include "X10ex.h"
-#include "X10rf.h"
-#include "X10ir.h"
+
+#include "Arduino.h" 
 #include <SPI.h>
-#include <Ethernet.h>
+#include <Wire.h>
+#include "X10Wireless.h"
+#include "X10ex.h"
+#include "X10ir.h"
+#include "X10rf.h"
+#include "DHT.h"  
+#include "DS3231.h"
+#include "X10ExSketch.h"
 
-#define DEBUG 0
 
-#define POWER_LINE_MSG "PL:"
-#define POWER_LINE_MSG_TIME 1400
-#define RADIO_FREQ_MSG "RF:"
-#define INFRARED_MSG "IR:"
-#define SERIAL_DATA_MSG "SD:"
-#define SERIAL_DATA_THRESHOLD 1000
-#define ETHERNET_REST_MSG "ER:"
-#define MODULE_STATE_MSG "MS:"
-#define MSG_BUFFER_ERROR "_ExBuffer"
-#define MSG_DATA_ERROR "_ExSyntax"
-#define MSG_RECEIVE_TIMEOUT "_ExTimOut"
-#define MSG_AUTH_ERROR "_ExNoAuth"
-#define MSG_METHOD_ERROR "_ExMethod"
-
-// Default username and password are "test" and "test". NOTE: With basic authentication user name and password is sent in clear text.
-// To generate Base64 string first concatenate the user name and password using colon as a separator. Ex: testusername:testpassword
-// To encode the username:password string use an online encoder like: "http://www.opinionatedgeek.com/dotnet/tools/base64encode/".
-// NOTE: If you would like to disable Basic Authentication, just set the HTTP_AUTH_BASE64 define to an empty string "".
-#define HTTP_AUTH_BASE64 "dGVzdDp0ZXN0"
-
-// The buffer is used to hold data when reading HTTP request lines. If you are using a very long username and password, you might
-// need to increase the buffer size. Using long post strings, for example when executing scenarios with multiple extended commands,
-// might also cause the buffer to run out of space. With a buffer size of 64, you can send a scenario with 20 individual standard
-// commands or 7 individual extended commands. A standard command is 3 bytes long and an extended command is 9 bytes long.
-#define HTTP_BUFFER_MAX 64
-
-// I recommend disabling the "Expect: 100-continue" on your HTTP client. When posting data with this feature enabled the HTTP client
-// will send an "Expect: 100-continue" request in the header and then wait for the server to respond with a "100 Continue" before
-// sending the body. This makes HTTP posts unnecessarily slow, especially when using slow cell phone connections. The default response
-// timeout is 5 seconds. To disable "Expect: 100-continue" support on the Arduino: just set the timeout defined below to 0.
-#define HTTP_CONTINUE_TIMEOUT 5000
-
-// Ethernet receive HTTP parser constants
-#define HTTP_STATE_PARSE_METHOD   0
-#define HTTP_STATE_AUTHENTICATE   1
-#define HTTP_STATE_WAIT_CONTINUE  2
-#define HTTP_STATE_CONTINUE       3
-#define HTTP_STATE_BODY_DONE      4
-#define HTTP_METHOD_UNKNOWN  0
-#define HTTP_METHOD_GET      1
-#define HTTP_METHOD_POST     2
-#define HTTP_METHOD_DELETE   3
-
-// Fields used for serial and byte message reception
+// Fields used for byte message reception
 unsigned long sdReceived;
 char bmHouse;
 byte bmUnit;
 byte bmCommand;
 byte bmExtCommand;
+const uint64_t pipes[2] = { 0xABCDABCD71LL, 0x544d52687CLL };
+byte data[32];
 
-// Callback declarations
-X10ex::plcReceiveCallback_t plcReceiveCallback;
-X10rf::rfReceiveCallback_t rfReceiveCallback;
-X10ir::irReceiveCallback_t irReceiveCallback;
+// DHT-11 Digital Humidity and Temperature Sensor
+DHT dht(DHT_PIN, DHT21);
 
-// Choose a MAC-address and IP-address for your controller below.
-// The IP address you should choose depends on your network setup:
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(10, 0, 0, 3);
-
-// X10 Power Line Communication Library
-X10ex x10ex(
-	2, // Zero Cross Interrupt Number (2 = "Custom" Pin Change Interrupt)
-	4, // Zero Cross Interrupt Pin (Pin 4-7 can be used with interrupt 2)
-	5, // Power Line Transmit Pin 
-	6, // Power Line Receive Pin
-	true, // Enable this to see echo of what is transmitted on the power line
-	plcReceiveCallback, // Event triggered when power line message is received
-	1, // Number of phases (1 = No Phase Repeat/Coupling)
-	50 // The power line AC frequency (e.g. 50Hz in Europe, 60Hz in North America)
-	);
-
-// X10 RF Receiver Library
-X10rf x10rf(
-	0, // Receive Interrupt Number (0 = Standard Arduino External Interrupt)
-	2, // Receive Interrupt Pin (Pin 2 must be used with interrupt 0)
-	rfReceiveCallback // Event triggered when RF message is received
-	);
-
-// X10 Infrared Receiver Library
-X10ir x10ir(
-	1, // Receive Interrupt Number (1 = Standard Arduino External Interrupt)
-	3, // Receive Interrupt Pin (Pin 3 must be used with interrupt 1)
-	'A', // Default House Code
-	irReceiveCallback // Event triggered when IR message is received
-	);
-
-// Ethernet server library
-EthernetServer server(
-	80 // Start listening on port 80 (http)
-	);
-
-void setup()
-{
-	// Tie callbacks to actual functions
-	plcReceiveCallback = powerLineEvent;
-	rfReceiveCallback = radioFreqEvent;
-	irReceiveCallback = infraredEvent;
-	// Remember to set baud rate in Serial Monitor or lower this to 9600 (default value)
-	Serial.begin(115200);
-	// Start the PLC, RF and IR libraries
-	x10ex.begin();
-	x10rf.begin();
-	x10ir.begin();
-	// Start the Ethernet Server library
-	Ethernet.begin(mac, ip);
-	server.begin();
-	// X10 is printed in Serial Monitor at startup if you have connected your Arduino correctly
-	Serial.println("X10");
-}
-
-void loop()
-{
-	if (!Serial.available()) ethernetReceive();
-}
+// DS3231 Real Time Clock
+DS3231 rtc(SDA, SCL);
 
 // Process messages received from X10 modules over the power line
 void powerLineEvent(char house, byte unit, byte command, byte extData, byte extCommand, byte remainingBits)
 {
-	printX10Message(POWER_LINE_MSG, house, unit, command, extData, extCommand, remainingBits);
+  printX10Message(POWER_LINE_MSG, house, unit, command, extData, extCommand, remainingBits);
+  byte buffer[5];
 }
 
-// Process commands received from X10 compatible RF remote
-void radioFreqEvent(char house, byte unit, byte command, bool isRepeat)
+// X10 Power Line Communication Library
+X10ex x10ex(
+  X10_IRQ,			// Zero Cross Interrupt Number (2 = "Custom" Pin Change Interrupt)
+  X10_RTS_PIN,		// Zero Cross Interrupt Pin (Pin 4-7 can be used with interrupt 2)
+  X10_TX_PIN,		// Power Line Transmit Pin 
+  X10_RX_PIN,		// Power Line Receive Pin
+  true,				// Enable this to see echo of what is transmitted on the power line
+  &powerLineEvent,	// Event triggered when power line message is received
+  1,				// Number of phases (1 = No Phase Repeat/Coupling)
+  60				// The power line AC frequency (e.g. 50Hz in Europe, 60Hz in North America)
+  );
+
+// Process X10 commands received from RF24L01+
+void x10RequestEvent(X10Wireless* x10Wireless, char house, byte unit, byte command)
 {
-	if (!isRepeat) printX10Message(RADIO_FREQ_MSG, house, unit, command, 0, 0, 0);
+	Serial.println("x10RequestEvent");
+	printX10Message(WIRELESS_DATA_MSG, house, unit, command, 0, 0, 0);
 	// Check if command is handled by scenario; if not continue
-	if (!handleUnitScenario(house, unit, command, isRepeat, false))
+	if (!handleUnitScenario(house, unit, command, false, false))
 	{
 		// Make sure that two or more repetitions are used for bright and dim,
-		// to avoid that commands are beeing buffered seperately when repeated
+		// to avoid that commands are being buffered separately when repeated
 		if (command == CMD_BRIGHT || command == CMD_DIM)
 		{
 			x10ex.sendCmd(house, unit, command, 2);
 		}
 		// Other commands map directly: just forward to PL interface
-		else if (!isRepeat)
+		else
 		{
 			x10ex.sendCmd(house, unit, command, 1);
 		}
 	}
 }
 
+// Process environment request (Temperature/Humidity) received from RF24L01+
+void environmentRequestEvent(X10Wireless* x10Wireless)
+{
+	// Reading temperature or humidity takes about 250 milliseconds!
+	// Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+	float h = dht.readHumidity();
+	// Read temperature as Celsius (the default)
+	float t = dht.readTemperature();
+	// Read temperature as Fahrenheit (isFahrenheit = true)
+	float f = dht.readTemperature(true);
+
+	// Check if any reads failed and exit early (to try again).
+	if (isnan(h) || isnan(t) || isnan(f)) {
+		//wirelessError("Failed to read from DHT sensor!");
+		return;
+	}
+
+	// Compute heat index in Fahrenheit (the default)
+	float hif = dht.computeHeatIndex(f, h);
+	// Compute heat index in Celsius (isFahreheit = false)
+	float hic = dht.computeHeatIndex(t, h, false);
+	byte buffer[5];
+	x10Wireless->sendPacket(EnvironmentSensorResponse, buffer, 5);
+}
+
+// Process set clock request received from RF24L01+
+void setClockRequestEvent(X10Wireless* x10Wireless, uint8_t dow, uint8_t day, uint8_t month, uint8_t year, uint8_t hour, uint8_t minute, uint8_t seconds)
+{
+	rtc.setDOW(dow);
+	rtc.setTime(hour, minute, seconds);
+	rtc.setDate(day, month, year);
+}
+
+// Process read clock request received from RF24L01+
+void readClockRequestEvent(X10Wireless* x10Wireless)
+{
+	rtc.getDOWStr();
+	rtc.getDateStr();
+	rtc.getTimeStr();
+	byte buffer[7];
+	x10Wireless->sendPacket(ReadClockResponse, buffer, 7);
+}
+
+// nRF24L01+ 2.4 GHz Wireless Transceiver
+X10Wireless radio(
+	RADIO1_CE_PIN, 
+	RADIO1_CS_PIN, 
+	&x10RequestEvent,
+	&environmentRequestEvent, 
+	&setClockRequestEvent, 
+	&readClockRequestEvent); // 68
+
+/*
+// Process commands received from X10 compatible RF remote
+void radioFreqEvent(char house, byte unit, byte command, bool isRepeat)
+{
+  if (!isRepeat) printX10Message(RADIO_FREQ_MSG, house, unit, command, 0, 0, 0);
+  // Check if command is handled by scenario; if not continue
+  if (!handleUnitScenario(house, unit, command, isRepeat, false))
+  {
+	// Make sure that two or more repetitions are used for bright and dim,
+	// to avoid that commands are being buffered separately when repeated
+	if (command == CMD_BRIGHT || command == CMD_DIM)
+	{
+	  x10ex.sendCmd(house, unit, command, 2);
+	}
+	// Other commands map directly: just forward to PL interface
+	else if (!isRepeat)
+	{
+	  x10ex.sendCmd(house, unit, command, 1);
+	}
+  }
+}
+
 // Process commands received from X10 compatible IR remote
 void infraredEvent(char house, byte unit, byte command, bool isRepeat)
 {
-	if (!isRepeat) printX10Message(INFRARED_MSG, house, unit, command, 0, 0, 0);
-	// Check if command is handled by scenario; if not continue
-	if (!handleUnitScenario(house, unit, command, isRepeat, false))
+  if (!isRepeat) printX10Message(INFRARED_MSG, house, unit, command, 0, 0, 0);
+  // Check if command is handled by scenario; if not continue
+  if (!handleUnitScenario(house, unit, command, isRepeat, false))
+  {
+	// Make sure that two or more repetitions are used for bright and dim,
+	// to avoid that commands are being buffered separately when repeated
+	if (command == CMD_BRIGHT || command == CMD_DIM)
 	{
-		// Make sure that two or more repetitions are used for bright and dim,
-		// to avoid that commands are beeing buffered seperately when repeated
-		if (command == CMD_BRIGHT || command == CMD_DIM)
-		{
-			x10ex.sendCmd(house, unit, command, 2);
-		}
-		// Only repeat bright and dim commands
-		else if (!isRepeat)
-		{
-			// Handle Address Command (House + Unit)
-			if (command == CMD_ADDRESS)
-			{
-				x10ex.sendAddress(house, unit, 1);
-			}
-			// Other commands map directly: just forward to PL interface
-			else
-			{
-				x10ex.sendCmd(house, unit, command, 1);
-			}
-		}
+	  x10ex.sendCmd(house, unit, command, 2);
 	}
+	// Only repeat bright and dim commands
+	else if (!isRepeat)
+	{
+	  // Handle Address Command (House + Unit)
+	  if (command == CMD_ADDRESS)
+	  {
+		x10ex.sendAddress(house, unit, 1);
+	  }
+	  // Other commands map directly: just forward to PL interface
+	  else
+	  {
+		x10ex.sendCmd(house, unit, command, 1);
+	  }
+	}
+  }
 }
 
-// Process serial data messages received from computer over USB, Bluetooth, e.g.
-//
-// Serial messages are 3 or 9 bytes long. Use hex 0-F to address units and send commands.
-// Bytes must be sent within one second (defined threshold) from the first to the last
-// Below are some examples:
-//
-// Standard Messages examples:
-// A12 (House=A, Unit=2, Command=On)
-// AB3 (House=A, Unit=12, Command=Off)
-// A_5 (House=A, Unit=N/A, Command=Bright)
-// |||
-// ||+-- Command 0-F or _  Example: 2 = On, 7 = ExtendedCode and _ = No Command
-// |+--- Unit 0-F or _     Example: 0 = Unit 1, F = Unit 16 and _ = No unit
-// +---- House code A-P    Example: A = House A and P = House P :)
-//
-// Extended Message examples:
-// A37x31x21 (House=A, Unit=4, Command=ExtendedCode, Extended Command=PreSetDim, Extended Data=33)
-// B87x01x0D (House=B, Unit=9, Command=ExtendedCode, Extended Command=ShutterOpen, Extended Data=13)
-//     |/ |/
-//     |  +-- Extended Data byte in hex     Example: 01 = 1%, 1F = 50% and 3E = 100% brightness (range is decimal 0-62)
-//     +----- Extended Command byte in hex  Example: 31 = PreSetDim, for more examples check the X10 ExtendedCode spec.
-//
-// Scenario Execute examples:
-// S03 (Execute scenario 3)
-// S14 (Execute scenario 20)
-// ||/
-// |+--- Scenario byte in hex (Hex: 00-FF, Dec: 0-255)
-// +---- Scenario Execute Character
-//
-// Request Module State examples:
-// R** (Request buffered state of all modules)
-// RG* (Request buffered state of modules using house code G)
-// RA2 (Request buffered state of module A3)
-// |||
-// ||+-- Unit 0-F or *        Example: 0 = Unit 1, A = Unit 10 and * = All units
-// |+--- House code A-P or *  Example: A = House A, P = House P and * = All house codes
-// +---- Request Module State Character
-//
-// Wipe Module State examples:
-// RW* (Wipe state data for all modules)
-// RWB (Wipe state data for all modules using house code B)
-// |||
-// ||+-- House code A-P or *  Example: A = House A, P = House P and * = All house codes
-// |+--- Wipe Module State Character
-// +---- Request Module State Character
-//
+// X10 RF Receiver Library
+X10rf x10rf(
+	RF_IRQ, // Receive Interrupt Number (0 = Standard Arduino External Interrupt)
+	RF_RECEIVER_PIN, // Receive Pin (Pin 2 must be used with interrupt 0)
+	&radioFreqEvent // Event triggered when RF message is received
+	);
+
+// X10 Infrared Receiver Library
+X10ir x10ir(
+	IR_IRQ, // Receive Interrupt Number (1 = Standard Arduino External Interrupt)
+	IR_RECEIVER_PIN, // Receive Pin (Pin 3 must be used with interrupt 1)
+	'A', // Default House Code
+	&infraredEvent // Event triggered when IR message is received
+	);
+
+*/
+void setup()
+{
+	// Remember to set baud rate in Serial Monitor or lower this to 9600 (default value)
+	Serial.begin(115200);
+
+	// Start the x10 PLC, RF and IR libraries
+	x10ex.begin();
+	//x10rf.begin();
+	//x10ir.begin();
+
+	// Start Temperature / Humidity Sensor
+	dht.begin();
+
+	// Start Real-Time Clock interface
+	rtc.begin();
+
+	// Start the nRF24L01+ library
+	radio.begin(pipes[1], pipes[0]);
+
+	Serial.println("X10Ex has loaded and is now monitoring for new events!");
+	const char* buffer = { "X10Ex has loaded!" };
+	//sendInstructionToHid(InstructionLcdPrintLine, buffer, 1);                                      
+}
+
+void loop()
+{ 
+	if (!Serial.available()) 
+		radio.receivePacket();
+	/*Time t;
+	fireEventsBasedOnTime(t);*/
+}
+
+
 void serialEvent()
 {
 	// Read 3 bytes from serial buffer
@@ -270,295 +266,38 @@ void serialEvent()
 			sdReceived = millis();
 		}
 		// Clear message if all bytes were not received within threshold
-		else if (sdReceived > millis() || millis() - sdReceived > SERIAL_DATA_THRESHOLD)
+		else if (sdReceived > millis() || (millis() - sdReceived) > SERIAL_DATA_THRESHOLD)
 		{
 			bmHouse = 0;
 			bmExtCommand = 0;
 			sdReceived = 0;
 			Serial.print(SERIAL_DATA_MSG);
 			Serial.println(MSG_RECEIVE_TIMEOUT);
+	  
 			// Clear serial input buffer
 			while (Serial.read() != -1);
 		}
 	}
 }
 
-// Process request received from Arduino Ethernet Shield
-void ethernetReceive()
+void fireEventsBasedOnTime()
 {
-	EthernetClient client = server.available();
-	if (client)
-	{
-		while (client.connected())
-		{
-			byte readState = HTTP_STATE_PARSE_METHOD;
-			byte parsingEncoded = 0;
-			byte encodedChar;
-			bool parsingText = false;
-			byte bufferMax = HTTP_BUFFER_MAX;
-			char buffer[HTTP_BUFFER_MAX + 1];
-			byte lastLineLen = HTTP_BUFFER_MAX;
-			byte method = HTTP_METHOD_UNKNOWN;
-			char house = '*';
-			byte unit = 0;
-			bool x10exBufferError = 0;
-			while (client.available())
-			{
-				char c = client.read();
-				// Handle encoded characters
-				if (c == '%')
-				{
-					parsingEncoded = 2;
-				}
-				else if (parsingEncoded)
-				{
-					parsingEncoded--;
-					if (parsingEncoded) encodedChar = charHexToDecimal(c) * 16;
-					else c = charHexToDecimal(c) + encodedChar;
-				}
-				// Handle "normal" characters
-				if (!parsingEncoded)
-				{
-					// Enable quoted text parser (allows lower case and space)
-					if (c == '"')
-					{
-						parsingText = !parsingText;
-					}
-					// Space is only stored when parsing HTTP method or quoted text
-					else if (isgraph(c) || ((readState == HTTP_STATE_PARSE_METHOD || parsingText) && c == ' '))
-					{
-						// Space is normally replaced with '+' in encoded strings
-						if (parsingText && c == '+') c = ' ';
-						// When parsing quoted text or Base64 string, characters are not converted to upper case
-						buffer[HTTP_BUFFER_MAX - bufferMax] =
-							parsingText || readState == HTTP_STATE_AUTHENTICATE ?
-							c : toupper(c);
-						buffer[HTTP_BUFFER_MAX - --bufferMax] = '\0';
-					}
-				}
-				// We have reached end of line, buffer or transmission
-				if (c == '\n' || !bufferMax || !client.available())
-				{
-					byte lineLen = strlen(buffer);
-					// Parse request method and path
-					if (readState == HTTP_STATE_PARSE_METHOD)
-					{
-						// If method is GET
-						if (!strncmp(buffer, "GET", 3))
-						{
-							method = HTTP_METHOD_GET;
-						}
-						// If method is POST
-						else if (!strncmp(buffer, "POST", 4))
-						{
-							method = HTTP_METHOD_POST;
-						}
-						// If method is DELETE
-						else if (!strncmp(buffer, "DELETE", 6))
-						{
-							method = HTTP_METHOD_DELETE;
-						}
-						// Parse path (house and unit)
-						byte ix = stringIndexOf(buffer, '/', 0, 0, 0);
-						if (buffer[ix] == '/')
-						{
-							char data = buffer[ix + 1];
-							if (data >= 'A' && data <= 'P')
-							{
-								house = data;
-								if (buffer[ix + 2] == '/')
-								{
-									unit = stringToDecimal(buffer, ix + 3, ix + 5);
-								}
-							}
-						}
-						readState = HTTP_STATE_AUTHENTICATE;
-					}
-					// Validate user credentials (stored in Base64 string)
-					else if (readState == HTTP_STATE_AUTHENTICATE)
-					{
-						if (!lineLen) break;
-						byte base64Len = strlen(HTTP_AUTH_BASE64);
-						// Base64 string should be found at position 19 excluding whitespace
-						if (!base64Len || (base64Len == lineLen - 19 && !strncmp(buffer + 19, HTTP_AUTH_BASE64, base64Len)))
-						{
-							readState = HTTP_STATE_CONTINUE;
-						}
-					}
-#if HTTP_CONTINUE_TIMEOUT > 0
-					// Look for "Expect: 100-continue"
-					else if (readState == HTTP_STATE_CONTINUE && method == HTTP_METHOD_POST && !strncmp(buffer, "EXPECT:100-CONTINUE", 19))
-					{
-						client.println("HTTP/1.1 100 Continue\n");
-						readState = HTTP_STATE_WAIT_CONTINUE;
-					}
-					// Wait for client to receive "100 Continue" and start sending body
-					else if (readState == HTTP_STATE_WAIT_CONTINUE && !client.available() && lastLineLen)
-					{
-						int i;
-						for (int i = HTTP_CONTINUE_TIMEOUT; i > 0 && !client.available(); i--)
-						{
-							delay(1);
-						}
-						if (!i)
-						{
-							Serial.print(ETHERNET_REST_MSG);
-							Serial.println(MSG_RECEIVE_TIMEOUT);
-						}
-						readState = HTTP_STATE_CONTINUE;
-					}
-#endif
-					// Parse body and execute commands, after blank line seperating body from head has been received
-					if (readState >= HTTP_STATE_WAIT_CONTINUE && method == HTTP_METHOD_POST && !lastLineLen)
-					{
-						char cmdHouse = house;
-						byte cmdUnit = unit;
-						byte bufferLen = stringIndexOf(buffer, '\0', 0, HTTP_BUFFER_MAX, HTTP_BUFFER_MAX);
-						byte endIx = 0;
-						while (endIx < bufferLen)
-						{
-							byte startIx = endIx > 0 ? endIx + 1 : 0;
-							// Update command end index
-							endIx = stringIndexOf(buffer, '&', startIx, bufferLen, bufferLen);
-							// Get index of equal sign
-							byte eq = stringIndexOf(buffer, '=', startIx, endIx, 0);
-							if (eq > startIx)
-							{
-								// If user specified house code, use it in stead of the one parsed from path
-								if (!strncmp(buffer + startIx, "HOUSE", eq - startIx))
-								{
-									cmdHouse = buffer[eq + 1];
-								}
-								// If user specified unit code, use it in stead of the one parsed from path
-								else if (!strncmp(buffer + startIx, "UNIT", eq - startIx))
-								{
-									cmdUnit = stringToDecimal(buffer, eq + 1, endIx);
-								}
-								// Parse set module type command (0 = Unknown, 1 = Appliance, 2 = Dimmer, 3 = Sensor)
-								else if (!strncmp(buffer + startIx, "TYPE", eq - startIx))
-								{
-									x10ex.setModuleType(cmdHouse, cmdUnit, stringToDecimal(buffer, eq + 1, endIx));
-								}
-								// Parse set module name command (max. 16 characters)
-								else if (!strncmp(buffer + startIx, "NAME", eq - startIx))
-								{
-									x10ex.setModuleName(cmdHouse, cmdUnit, buffer + eq + 1, endIx - eq - 1);
-								}
-								// Parse on command (true, false, 1 and 0 are valid input)
-								else if (!strncmp(buffer + startIx, "ON", eq - startIx))
-								{
-									byte cmd;
-									cmd =
-										!strncmp(buffer + eq + 1, "TRUE", endIx - eq - 1 > 4 ? endIx - eq - 1 : 4) ||
-										!strncmp(buffer + eq + 1, "1", endIx - eq - 1) ?
-										CMD_ON : CMD_OFF;
-									// Check if command is handled by scenario; if not continue
-									if (!handleUnitScenario(cmdHouse, cmdUnit, cmd, false, true))
-									{
-										x10exBufferError = x10ex.sendCmd(cmdHouse, cmdUnit, cmd, 2);
-									}
-									if (!x10exBufferError)
-									{
-										printX10Message(ETHERNET_REST_MSG, cmdHouse, cmdUnit, cmd, 0, 0, 0);
-										delay(POWER_LINE_MSG_TIME);
-									}
-									break;
-								}
-								// Parse brightness command (0-100 percent)
-								else if (!strncmp(buffer + startIx, "BRIGHTNESS", eq - startIx))
-								{
-									byte brightness = x10ex.percentToX10Brightness(stringToDecimal(buffer, eq + 1, endIx));
-									x10exBufferError = x10ex.sendExt(cmdHouse, cmdUnit, CMD_EXTENDED_CODE, brightness, EXC_PRE_SET_DIM, 2);
-									if (!x10exBufferError)
-									{
-										printX10Message(ETHERNET_REST_MSG, cmdHouse, cmdUnit, CMD_EXTENDED_CODE, brightness, EXC_PRE_SET_DIM, 0);
-										delay(POWER_LINE_MSG_TIME);
-									}
-									break;
-								}
-								// Parse 3 byte command (Up to 16, 3 or 9 byte commands, are supported)
-								else if (!strncmp(buffer + startIx, "CMD", eq - startIx))
-								{
-									while (endIx - eq - 1 >= 3 && !x10exBufferError)
-									{
-										x10exBufferError = process3BMessage(ETHERNET_REST_MSG, buffer[eq + 1], buffer[eq + 2], buffer[eq + 3]);
-										eq += 3;
-									}
-									break;
-								}
-							}
-						}
-						readState = HTTP_STATE_BODY_DONE;
-					}
-					// Execute delete module state and info
-					else if (readState == HTTP_STATE_CONTINUE && method == HTTP_METHOD_DELETE)
-					{
-						x10ex.wipeModuleState(house, unit);
-						x10ex.wipeModuleInfo(house, unit);
-					}
-					parsingText = false;
-					bufferMax = HTTP_BUFFER_MAX;
-					buffer[0] = '\0';
-					lastLineLen = lineLen;
-				}
-				// Check if we are done receiving
-				if ((readState == HTTP_STATE_CONTINUE && method != HTTP_METHOD_POST) || readState == HTTP_STATE_BODY_DONE) break;
-			}
-			client.print("HTTP/1.1");
-			// State AUTH_START means user has not provided valid credentials yet
-			if (readState <= HTTP_STATE_AUTHENTICATE)
-			{
-				client.println(" 401 Authorization Required\nWWW-Authenticate: Basic realm=\"Secure Area\"\nContent-Type: text/html\n");
-				client.print("<html><body>401 Unauthorized</body></html>");
-				Serial.print(ETHERNET_REST_MSG);
-				Serial.println(MSG_AUTH_ERROR);
-			}
-			// User is trying to execute unsupported HTTP request method
-			else if (method == HTTP_METHOD_UNKNOWN)
-			{
-				client.println(" 501 Not Implemented\nContent-Type: application/json\n");
-				Serial.print(ETHERNET_REST_MSG);
-				Serial.println(MSG_METHOD_ERROR);
-			}
-			// Response is always sent after successful GET, POST or DELETE request
-			else
-			{
-				// Return JSON response
-				client.println(" 200 OK\nContent-Type: application/json\n");
-				if (house != '*' && unit > 0 && unit <= 16)
-				{
-					erPrintModuleState(client, house, unit, true, true);
-				}
-				else
-				{
-					client.println("{\n\"module\":\n[");
-					bool isFirst = true;
-					// All units using specified house code
-					if (house != '*')
-					{
-						for (byte i = 1; i <= 16; i++)
-						{
-							if (erPrintModuleState(client, house, i, isFirst, false)) isFirst = false;
-						}
-					}
-					// All units
-					else
-					{
-						for (short i = 0; i < 256; i++)
-						{
-							if (erPrintModuleState(client, (i >> 4) + 0x41, (i & 0xF) + 1, isFirst, false)) isFirst = false;
-						}
-					}
-					client.print("\n]\n}");
-				}
-			}
-			delay(1);
-			client.stop();
-		}
-	}
+
 }
 
-// Processes and executes 3 byte serial and ethernet messages.
+/*
+void sendInstructionToHid(InstructionTypes instructionType, const char* buffer, int length)
+{
+	byte sendBuffer[length + 1];
+	sendBuffer[0] = instructionType;
+	memcpy(sendBuffer + 1, buffer, sizeof(byte) * (length));
+
+	Wire.beginTransmission(HID_I2C_ADDRESS);
+	Wire.write(sendBuffer, length);
+	Wire.endTransmission();
+}
+*/
+// Processes and executes 3 byte serial and wireless messages
 bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 {
 	bool x10exBufferError = 0;
@@ -586,8 +325,8 @@ bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 			bmHouse = 0;
 		}
 	}
-	// Check if extended message was received (byte1 = Hex Seperator, byte2 = Hex 1, byte3 = Hex 2)
-	else if (byte1 == 'X' && bmHouse)
+	// Check if extended message was received (byte1 = Hex Separator, byte2 = Hex 1, byte3 = Hex 2)
+	else if (byte1 == 'X' && bmHouse)              
 	{
 		byte data = byte2 * 16 + byte3;
 		// No extended command set, assume that we are receiving command
@@ -684,6 +423,29 @@ void printX10Message(const char type[], char house, byte unit, byte command, byt
 		Serial.print("_");
 	}
 	Serial.println();
+
+	// Send info via RF24L01+
+	//byte* buffer[5];
+	data[0] = house;
+	data[1] = unit;
+	data[2] = command;
+	data[3] = extData;
+	data[4] = extCommand;
+	wrPacketTypes packetType = NotSet;
+	if (type == POWER_LINE_MSG)
+	{
+		packetType = X10EventNotification;
+	}
+	else if (type == RADIO_FREQ_MSG)
+	{
+		packetType = RfEventNotification;
+	}
+	else if (type == INFRARED_MSG)
+	{
+		packetType = IrEventNotification;
+	}
+	Serial.println("Sending Radio Packet");
+	radio.sendPacket(packetType, &data, 5);
 #if DEBUG
 	printDebugX10Message(type, house, unit, command, extData, extCommand, remainingBits);
 #endif
@@ -723,49 +485,38 @@ void sdPrintModuleState(char house, byte unit)
 	}
 }
 
-bool erPrintModuleState(EthernetClient client, char house, byte unit, bool isFirst, bool printUnseenModules)
+bool wrPrintModuleState(char house, byte unit, bool printUnseenModules)
 {
-	X10state state = x10ex.getModuleState(house, unit);
-	X10info info = x10ex.getModuleInfo(house, unit);
-	if (state.isSeen || printUnseenModules)
-	{
-		if (!isFirst) client.println(",");
-		client.print("{\n\"house\": \"");
-		client.print(house);
-		client.println("\",");
-		client.print("\"unit\": ");
-		client.print(unit, DEC);
-		client.print(",\n\"url\": \"/");
-		client.print(house);
-		client.print("/");
-		client.print(unit, DEC);
-		client.print("/\"");
-		if (info.type)
-		{
-			client.print(",\n\"type\": ");
-			client.print(info.type, DEC);
-		}
-		if (strlen(info.name))
-		{
-			client.print(",\n\"name\": \"");
-			client.print(info.name);
-			client.print("\"");
-		}
-		if (state.isKnown)
-		{
-			client.print(",\n\"on\": ");
-			client.print(state.isOn ? "true" : "false");
-			if (state.data)
-			{
-				client.print(",\n\"brightness\": ");
-				client.print(x10ex.x10BrightnessToPercent(state.data), DEC);
-			}
-		}
-		client.print("\n}");
-		return true;
-	}
-	return false;
+	//X10state state = x10ex.getModuleState(house, unit);
+	//X10info info = x10ex.getModuleInfo(house, unit);
+	//byte buffer[7];
+	//if (state.isSeen || printUnseenModules)
+	//{
+	//	buffer[0] = house;
+	//	buffer[1] = unit;
+	//	
+	//	if (info.type)
+	//	{
+	//		buffer[3] = info.type;
+	//	}
+	//	if (strlen(info.name))
+	//	{
+	//		//buffer[4] = (byte)info.name;
+	//	}
+	//	buffer[5] = state.isKnown;
+	//	if (state.isKnown)
+	//	{
+	//		buffer[6] = state.isOn;
+	//		if (state.data)
+	//		{
+	//			buffer[7] = x10ex.x10BrightnessToPercent(state.data);
+	//		}
+	//	}
+	//}
+	//return radio.sendPacket(X10EventNotification, buffer, 7);
+	return true;
 }
+
 
 void printX10ByteAsHex(byte data)
 {
@@ -820,7 +571,7 @@ void handleSdScenario(byte scenario)
 		// Sample Code
 		// Replace with your own setup
 		//////////////////////////////
-	case 0x01: sendAllLightsOn(); break;
+	case 0x01: sendMasterBedroomOn(); break;
 	case 0x02: sendHallAndKitchenOn(); break;
 	case 0x03: sendLivingRoomOn(); break;
 	case 0x04: sendLivingRoomTvScenario(); break;
@@ -992,6 +743,13 @@ bool sendLivingRoomTvScenario()
 		x10ex.sendExtDim('A', 2, 40, EXC_DIM_TIME_4, 1) ||
 		x10ex.sendExtDim('A', 3, 30, EXC_DIM_TIME_4, 1) ||
 		x10ex.sendExtDim('A', 4, 25, EXC_DIM_TIME_4, 1);
+}
+
+bool sendMasterBedroomOn()
+{
+	return
+		x10ex.sendCmd('A', 0, CMD_ON, 1) ||
+		x10ex.sendCmd('A', 1, CMD_ON, 1);
 }
 
 bool sendLivingRoomMovieScenario()
