@@ -24,7 +24,7 @@
 
 #if defined(__AVR__)
 	#include "Arduino.h"
-	#include "HW_AVR_defines.h"
+	#include "hardware/avr/HW_AVR_defines.h"
 #elif defined(__PIC32MX__)
 	#include "WProgram.h"
 	#include "hardware/pic32/HW_PIC32_defines.h"

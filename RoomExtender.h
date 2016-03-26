@@ -101,6 +101,9 @@
 // I2C Addresses 
 #define HID_I2C_ADDRESS		9 // (HID module)
 
+const int maxAllowedWrites = 20;
+const int memBase = 120;
+
 typedef enum {
 	InstructionSetKeyRate,
 	InstructionGetKey,

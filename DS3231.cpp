@@ -23,7 +23,7 @@
 
 // Include hardware-specific functions for the correct MCU
 #if defined(__AVR__)
-	#include "HW_AVR.h"
+	#include "hardware/avr/HW_AVR.h"
 #elif defined(__PIC32MX__)
   #include "hardware/pic32/HW_PIC32.h"
 #elif defined(__arm__)

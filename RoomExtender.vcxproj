@@ -101,9 +101,9 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\cores\arduino;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\variants\standard;C:\Users\willi\OneDrive\Documents\Arduino\RoomExtender;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries\SPI\src;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries\SPI\src\utility;C:\Program Files (x86)\Arduino\libraries;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries;C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\Extensions\mpo44hsl.cvj\Micro Platforms\default\debuggers;C:\Users\willi\OneDrive\Documents\Arduino\libraries;C:\Program Files (x86)\Arduino\hardware\tools\avr/avr/include/;C:\Program Files (x86)\Arduino\hardware\tools\avr//avr/include/avr/;C:\Program Files (x86)\Arduino\hardware\tools\avr/lib\gcc\avr\4.8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\cores\arduino;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\variants\standard;C:\Users\willi\OneDrive\Documents\Arduino\RoomExtender;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries\SPI\src;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries\SPI\src\utility;C:\Program Files (x86)\Arduino\libraries;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries;C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\Extensions\mpo44hsl.cvj\Micro Platforms\default\debuggers;C:\Users\willi\OneDrive\Documents\Arduino\libraries;C:\Users\willi\OneDrive\Documents\Arduino\RoomExtender;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\cores\arduino;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\variants\standard;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries\SPI\src;C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\Extensions\mpo44hsl.cvj\Micro Platforms\default\debuggers\VM_DBG;C:\Program Files (x86)\Arduino\libraries;C:\Users\willi\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.10\libraries;C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\Extensions\mpo44hsl.cvj\Micro Platforms\default\debuggers;C:\Users\willi\OneDrive\Documents\Arduino\libraries;C:\Program Files (x86)\Arduino\hardware\tools\avr/avr/include/;C:\Program Files (x86)\Arduino\hardware\tools\avr//avr/include/avr/;C:\Program Files (x86)\Arduino\hardware\tools\avr/lib\gcc\avr\4.8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>C:\Users\willi\OneDrive\Documents\Arduino\RoomExtender\__vm\.RoomExtender.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <PreprocessorDefinitions>__AVR_ATmega328p__;__AVR_ATmega328P__;F_CPU=16000000L;ARDUINO=10607;ARDUINO_AVR_UNO;ARDUINO_ARCH_AVR;__cplusplus;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__AVR_ATmega328p__;__AVR_ATmega328P__;_VMDEBUG=1;F_CPU=16000000L;ARDUINO=10607;ARDUINO_AVR_UNO;ARDUINO_ARCH_AVR;__cplusplus;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Development|Win32'">
@@ -171,6 +171,12 @@
   <ItemGroup>
     <ClInclude Include="DHT.h" />
     <ClInclude Include="DS3231.h" />
+    <ClInclude Include="EEPROM.h" />
+    <ClInclude Include="EEPROMex.h" />
+    <ClInclude Include="EEPROMVar.h" />
+    <ClInclude Include="inttypes.h" />
+    <ClInclude Include="io.h" />
+    <ClInclude Include="IPAddress.h" />
     <ClInclude Include="nRF24L01.h" />
     <ClInclude Include="printf.h" />
     <ClInclude Include="RF24.h" />
@@ -185,6 +191,8 @@
   <ItemGroup>
     <ClCompile Include="DHT.cpp" />
     <ClCompile Include="DS3231.cpp" />
+    <ClCompile Include="EEPROMex.cpp" />
+    <ClCompile Include="IPAddress.cpp" />
     <ClCompile Include="RF24.cpp" />
     <ClCompile Include="X10ex.cpp" />
     <ClCompile Include="X10ir.cpp" />

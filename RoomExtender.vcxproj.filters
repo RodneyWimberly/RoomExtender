@@ -48,7 +48,25 @@
     <ClInclude Include="Radio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="EEPROMex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EEPROMVar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inttypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EEPROM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="__vm\.RoomExtender.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IPAddress.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -72,6 +90,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Radio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EEPROMex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="IPAddress.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

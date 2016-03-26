@@ -12,6 +12,7 @@
 #define _VSARDUINO_H_
 #define __AVR_ATmega328p__
 #define __AVR_ATmega328P__
+#define _VMDEBUG 1
 #define F_CPU 16000000L
 #define ARDUINO 10607
 #define ARDUINO_AVR_UNO
@@ -89,6 +90,12 @@ extern "C" void __cxa_pure_virtual() {;}
 #include <..\RoomExtender\DHT.h>
 #include <..\RoomExtender\DS3231.cpp>
 #include <..\RoomExtender\DS3231.h>
+#include <..\RoomExtender\EEPROM.h>
+#include <..\RoomExtender\EEPROMVar.h>
+#include <..\RoomExtender\EEPROMex.cpp>
+#include <..\RoomExtender\EEPROMex.h>
+#include <..\RoomExtender\IPAddress.cpp>
+#include <..\RoomExtender\IPAddress.h>
 #include <..\RoomExtender\RF24.cpp>
 #include <..\RoomExtender\RF24.h>
 #include <..\RoomExtender\RF24_config.h>
@@ -104,6 +111,8 @@ extern "C" void __cxa_pure_virtual() {;}
 #include <..\RoomExtender\X10ir.h>
 #include <..\RoomExtender\X10rf.cpp>
 #include <..\RoomExtender\X10rf.h>
+#include <..\RoomExtender\inttypes.h>
+#include <..\RoomExtender\io.h>
 #include <..\RoomExtender\nRF24L01.h>
 #include <..\RoomExtender\printf.h>
 #endif

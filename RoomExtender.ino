@@ -22,6 +22,9 @@
 #include "RoomExtender.h"
 #include "Arduino.h" 
 #include <SPI.h>
+#include "EEPROMex.h"
+#include "EEPROMvar.h"
+#include "IPAddress.h"
 #include "Radio.h"
 #include "X10ex.h"
 #if ENABLE_X10_IR
@@ -44,6 +47,7 @@ byte bmUnit;
 byte bmCommand;
 byte bmExtCommand; 
 const uint64_t addresses[2] = { 0xABCDABCD71LL, 0x544d52687CLL };
+//const IPAddress addresses[2] = { IPAddress(1, 1, 1, 1), IPAddress(1, 1, 2, 1) };
 byte data[32];
 
 // Process messages received from X10 modules over the power line
@@ -67,7 +71,8 @@ X10ex x10ex(
 // Process messages from the wireless transceiver 
 void wirelessEvent(Radio* radio, wrPacketTypes wrPacketType, const void* buffer, uint8_t length)
 {
-	const char* current = reinterpret_cast<const char*>(buffer);
+	const byte* current = reinterpret_cast<const byte*>(buffer);
+	Serial.println(millis());
 	Serial.print("Length: ");
 	Serial.println(length);
 	Serial.print("0: ");
@@ -78,6 +83,8 @@ void wirelessEvent(Radio* radio, wrPacketTypes wrPacketType, const void* buffer,
 	Serial.println(current[2]);
 	Serial.print("3: ");
 	Serial.println(current[3]);
+	Serial.print("4: ");
+	Serial.println(current[4]);
 	Serial.print("PacketType: ");
 	Serial.println(wrPacketType);
 	if (wrPacketType == X10StandardRequest)
@@ -211,6 +218,18 @@ void setup()
 {
 	// Remember to set baud rate in Serial Monitor or lower this to 9600 (default value)
 	Serial.begin(115200);
+
+	// start reading from position memBase (address 0) of the EEPROM. Set maximumSize to EEPROMSizeUno 
+	// Writes before membase or beyond EEPROMSizeUno will only give errors when _EEPROMEX_DEBUG is set
+	EEPROM.setMemPool(memBase, EEPROMSizeUno);
+
+	// Set maximum allowed writes to maxAllowedWrites. 
+	// More writes will only give errors when _EEPROMEX_DEBUG is set
+	EEPROM.setMaxAllowedWrites(maxAllowedWrites);
+	//EEPROMVar<float> eepromFloat(5.5);  // initial value 5.5
+	//eepromFloat.save();     // store EEPROMVar to EEPROM
+	//eepromFloat = 0.0;      // reset 
+	//eepromFloat.restore();  // restore EEPROMVar to EEPROM
 
 	// Start the x10 PLC, RF and IR libraries
 	x10ex.begin();
