@@ -176,8 +176,6 @@
     <ClInclude Include="EEPROMVar.h" />
     <ClInclude Include="hardware\avr\HW_AVR.h" />
     <ClInclude Include="hardware\avr\HW_AVR_defines.h" />
-    <ClInclude Include="inttypes.h" />
-    <ClInclude Include="io.h" />
     <ClInclude Include="IPAddress.h" />
     <ClInclude Include="nRF24L01.h" />
     <ClInclude Include="printf.h" />

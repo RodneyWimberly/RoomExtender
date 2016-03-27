@@ -54,12 +54,6 @@
     <ClInclude Include="EEPROMVar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inttypes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="io.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EEPROM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
