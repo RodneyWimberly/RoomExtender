@@ -22,7 +22,7 @@
 #define EEPROM_h
 
 #include <inttypes.h>
-#include <eeprom.h>
+#include "eeprom.h"
 #include <io.h>
 
 /***
