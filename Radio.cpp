@@ -61,7 +61,7 @@ void Radio::receivePacket()
 		if(radioCallback)
 		{
 			const uint8_t bufferLength = length - 1;
-			byte buffer[bufferLength];
+			char buffer[bufferLength];
 			memcpy(payload + 1, buffer, bufferLength);
 			radioCallback(this, wrPacketType, &buffer, bufferLength);
 		}

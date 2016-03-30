@@ -2,6 +2,8 @@
 #include "X10ex.h"
 #include "RoomExtender.h"
 
+#if ENABLE_X10_SCENARIO
+
 // Handles scenario execute commands received as serial data message
 void handleSdScenario(byte scenario)
 {
@@ -194,4 +196,4 @@ bool sendLivingRoomMovieScenario()
 		x10ex.sendCmd('A', 3, CMD_OFF, 1) ||
 		x10ex.sendExtDim('A', 4, 25, EXC_DIM_TIME_4, 1);
 }
-
+#endif

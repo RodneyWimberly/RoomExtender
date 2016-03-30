@@ -40,7 +40,7 @@ public:
 
 private:
 	RF24 *radio;
-	byte payload[32];
+	char payload[32];
 	uint8_t irqPin;
 	bool useIrq;
 	radioCallback_t radioCallback;
@@ -49,15 +49,15 @@ private:
 /*
 typedef struct _X10StandardRequest_s
  {
- 	char houseCode;
+	char houseCode;
 	uint8_t unitCode;
 	uint8_t commandCode;
  } X10StandardRequest_s;  
 
  typedef union _X10StandardRequest_u
  {
- 	X10StandardRequest_s x10StandardRequest;
- 	char buffer[sizeof(X10StandardRequest_s)];
+	X10StandardRequest_s x10StandardRequest;
+	char buffer[sizeof(X10StandardRequest_s)];
  } X10StandardRequest_u;
 
 X10StandardRequest_u x10StandardRequest;

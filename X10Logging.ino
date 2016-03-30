@@ -22,11 +22,12 @@ void printX10Message(const char type[], char house, byte unit, byte command, byt
 	Serial.println();
 
 	// Send info via RF24L01+
-	data[0] = house;
-	data[1] = unit;
-	data[2] = command;
-	data[3] = extData;
-	data[4] = extCommand;
+	X10Data_s x10Data;
+	x10Data.houseCode = house;
+	x10Data.unitCode = unit;
+	x10Data.commandCode = command;
+	x10Data.extendedData = extData;
+	x10Data.extendedCommand = extCommand;
 	wrPacketTypes packetType = NotSet;
 	if (type == SERIAL_DATA_MSG)
 	{
@@ -44,7 +45,10 @@ void printX10Message(const char type[], char house, byte unit, byte command, byt
 	{
 		packetType = IrEventNotification;
 	}
-	radio.sendPacket(packetType, &data, 5);
+	size_t size = sizeof(data);
+	char buffer[size];
+	memcpy(buffer, &data, size);
+	radio.sendPacket(packetType, &buffer, size);
 #if DEBUG
 	printDebugX10Message(type, house, unit, command, extData, extCommand, remainingBits);
 #endif
@@ -84,36 +88,40 @@ void sdPrintModuleState(char house, byte unit)
 	}
 }
 
-bool wrPrintModuleState(char house, byte unit, bool printUnseenModules)
+void wrPrintModuleState(char house, byte unit, bool printUnseenModules)
 {
-	//X10state state = x10ex.getModuleState(house, unit);
-	//X10info info = x10ex.getModuleInfo(house, unit);
-	//byte buffer[7];
-	//if (state.isSeen || printUnseenModules)
-	//{
-	//	buffer[0] = house;
-	//	buffer[1] = unit;
-	//	
-	//	if (info.type)
-	//	{
-	//		buffer[3] = info.type;
-	//	}
-	//	if (strlen(info.name))
-	//	{
-	//		//buffer[4] = (byte)info.name;
-	//	}
-	//	buffer[5] = state.isKnown;
-	//	if (state.isKnown)
-	//	{
-	//		buffer[6] = state.isOn;
-	//		if (state.data)
-	//		{
-	//			buffer[7] = x10ex.x10BrightnessToPercent(state.data);
-	//		}
-	//	}
-	//}
-	//return radio.sendPacket(X10EventNotification, buffer, 7);
-	return true;
+	X10state state = x10ex.getModuleState(house, unit);
+	X10info info = x10ex.getModuleInfo(house, unit);
+	X10ModuleStatus_s moduleStatus;
+
+	if (state.isSeen || printUnseenModules)
+	{
+		moduleStatus.houseCode = house;
+		moduleStatus.unitCode = unit;
+		
+		if (info.type)
+		{
+			moduleStatus.type = info.type;
+		}
+		if (strlen(info.name))
+		{
+			moduleStatus.name = info.name;
+		}
+		moduleStatus.stateIsKnown = state.isKnown;
+		if (state.isKnown)
+		{
+			moduleStatus.stateIsOn = state.isOn;
+			if (state.data)
+			{
+				moduleStatus.dimPercentage = x10ex.x10BrightnessToPercent(state.data);
+			}
+		}
+	}
+
+	size_t size = sizeof(data);
+	char buffer[size];
+	memcpy(buffer, &data, size);
+	radio.sendPacket(X10ExtendedResponse, buffer, size);
 }
 
 
@@ -177,7 +185,7 @@ void printDebugX10Message(const char type[], char house, byte unit, byte command
 	{
 		// This is not a real X10 command, it's a special command used by the IR
 		// library to signal that an address and a house code has been received
-	case CMD_ADDRESS:
+	case 0x10:
 		break;
 	case CMD_ALL_UNITS_OFF:
 		Serial.println("_AllUnitsOff");

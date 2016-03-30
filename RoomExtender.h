@@ -20,6 +20,8 @@
 #ifndef RoomExtender_h
 #define RoomExtender_h
 
+#include "DS3231.h"
+
 #define DEBUG 1
 
 #define POWER_LINE_MSG 			"PL:"
@@ -46,6 +48,7 @@
 
 // Digital Pin Usage
 #if USE_UNO
+	#define DHT_TYPE			DHT11
 	#define UART_TX_PIN     	0 // Universal Asynchronous Receiver Transmitter - Transmit
 	#define UART_RX_PIN     	1 // Universal Asynchronous Receiver Transmitter - Receive
 	#define IR_RECEIVER_PIN		2 // 38KHz Infrared Receiver Module (VS1838B)
@@ -61,6 +64,7 @@
 	#define SPI_MISO_PIN    	12 // Serial Peripheral Interface - Master Input, Slave Output (output from slave)
 	#define SPI_SCLK_PIN     	13 // Serial Peripheral Interface - Serial Clock (output from master)
 #else
+	#define DHT_TYPE			DHT22
 	#define UART_TX_PIN     	0 // Universal Asynchronous Receiver Transmitter - Transmit
 	#define UART_RX_PIN     	1 // Universal Asynchronous Receiver Transmitter - Receive
 	#define IR_RECEIVER_PIN		2 // 38KHz Infrared Receiver Module (VS1838B)
@@ -76,6 +80,13 @@
 	#define SPI_MISO_PIN    	12 // Serial Peripheral Interface - Master Input, Slave Output (output from slave)
 	#define SPI_SCLK_PIN     	13 // Serial Peripheral Interface - Serial Clock (output from master)
 #endif
+
+#define ENABLE_X10_IR			0
+#define ENABLE_X10_RF			0
+#define ENABLE_X10_SCENARIO		0
+#define ENABLE_RTC				1
+#define ENABLE_DHT				1
+#define ENABLE_HID				0
 
 // Analog Pin Usage
 #define LIGHT_DIGITAL_PIN	0 // Digital Light Intensity Sensor Module Photo Resistor
@@ -100,5 +111,40 @@ typedef enum {
 	InstructionLcdWrite,
 	InstructionLcdCommand
 } InstructionTypes;
+
+
+struct X10Data_s
+{
+	char houseCode;
+	uint8_t unitCode;
+	uint8_t commandCode;
+	uint8_t extendedData;
+	uint8_t extendedCommand;
+} ;
+
+struct X10ModuleStatus_s
+{
+	char houseCode;
+	uint8_t unitCode;
+	uint8_t type;
+	char* name;
+	bool stateIsKnown;
+	bool stateIsOn;
+	uint8_t dimPercentage;
+} ;
+
+struct EnvironmentData_s
+{
+	float humidity;
+	float temperatureC;
+	float temperatureF;
+	float heatIndexC;
+	float heatIndexH;
+};
+
+struct ClockData_s
+{
+	Time time;
+};
 
 #endif

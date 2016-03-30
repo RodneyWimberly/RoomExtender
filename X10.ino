@@ -27,7 +27,9 @@ bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 		{
 			printX10Message(type, bmHouse, bmUnit, byte3, 0, 0, 8 * Serial.available());
 			// Check if command is handled by scenario; if not continue
+#if ENABLE_X10_SCENARIO
 			if (!handleUnitScenario(bmHouse, bmUnit, bmCommand, false, true))
+#endif
 			{
 				x10exBufferError = x10ex.sendCmd(bmHouse, bmUnit, bmCommand, bmCommand == CMD_BRIGHT || bmCommand == CMD_DIM ? 2 : 1);
 			}
@@ -52,6 +54,7 @@ bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 		}
 	}
 	// Check if scenario execute command was received (byte1 = Scenario Character, byte2 = Hex 1, byte3 = Hex 2)
+#if ENABLE_X10_SCENARIO
 	else if (byte1 == 'S')
 	{
 		byte scenario = byte2 * 16 + byte3;
@@ -61,6 +64,7 @@ bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 		Serial.println(scenario, HEX);
 		handleSdScenario(scenario);
 	}
+#endif
 	// Check if request module state command was received (byte1 = Request State Character, byte2 = House, byte3 = Unit)
 	else if (byte1 == 'R' && ((byte2 >= 'A' && byte2 <= 'P') || byte2 == '*'))
 	{
