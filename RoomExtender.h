@@ -17,8 +17,8 @@
 /* Written by Thomas Mittet (code@lookout.no) October 2010.             */
 /************************************************************************/
 
-#ifndef X10ExSketch_h
-#define X10ExSketch_h
+#ifndef RoomExtender_h
+#define RoomExtender_h
 
 #define DEBUG 1
 
@@ -35,27 +35,47 @@
 #define MSG_RECEIVE_TIMEOUT 	"_ExTimOut"
 #define MSG_AUTH_ERROR 			"_ExNoAuth"
 #define MSG_METHOD_ERROR 		"_ExMethod"
+#define USE_UNO					1
 
 // IRQ Usage
 #define IR_IRQ        		0 // IR Interrupt Request (IRQ 0 must be used with pin 2)
+#define RADIO1_IRQ			0 // nRF24L01+ Interrupt Request (IRQ 0 must be used with pin 2)
 #define RF_IRQ        		1 // RF Interrupt Request (IRQ 1 must be used with pin 3)
+#define RADIO2_IRQ			1`// nRF24L01+ Interrupt Request (IRQ 1 must be used with pin 3)
 #define X10_IRQ       		2 // PSC05 Interrupt Request (IRQ 2 is a custom setup that will work with pins 4 -7)
 
 // Digital Pin Usage
-#define UART_TX_PIN     	0 // Universal Asynchronous Receiver Transmitter - Transmit
-#define UART_RX_PIN     	1 // Universal Asynchronous Receiver Transmitter - Receive
-#define IR_RECEIVER_PIN		2 // 38KHz Infrared Receiver Module (VS1838B)
-#define RF_RECEIVER_PIN 	3 // 433MHz Radio Frequency Receiver (RF-433-4A40201 MX-05V)
-#define X10_RTS_PIN     	4 // X10 Controller - Zero Crossing (PSC05)
-#define X10_RX_PIN      	5 // X10 Controller - Receive (PSC05)
-#define X10_TX_PIN      	6 // X10 Controller - Transmit (PSC05)
-#define DHT_PIN       		7 // Digital Humidity and Tempature Sensor (DHT-11)
-#define RADIO1_CS_PIN  		8 // Serial Peripheral Interface - Chip Select 1 (nRF24L01+)
-#define RADIO1_CE_PIN   	9 // Serial Peripheral Interface - Chip Enable 1 (nRF24L01+)
-#define RF_TRANSMIT_PIN 	10 // 315MHz/330MHz/433MHz Radio Frequency Transmitter (RF-433-4A40201 MX-FS-03V)
-#define SPI_MOSI_PIN    	11 // Serial Peripheral Interface - Master Output, Slave Input (output from master)
-#define SPI_MISO_PIN    	12 // Serial Peripheral Interface - Master Input, Slave Output (output from slave)
-#define SPI_SCLK_PIN     	13 // Serial Peripheral Interface - Serial Clock (output from master)
+#if USE_UNO
+	#define UART_TX_PIN     	0 // Universal Asynchronous Receiver Transmitter - Transmit
+	#define UART_RX_PIN     	1 // Universal Asynchronous Receiver Transmitter - Receive
+	#define IR_RECEIVER_PIN		2 // 38KHz Infrared Receiver Module (VS1838B)
+	#define RF_RECEIVER_PIN 	3 // 433MHz Radio Frequency Receiver (RF-433-4A40201 MX-05V)
+	#define X10_RTS_PIN     	4 // X10 Controller - Zero Crossing (PSC05)
+	#define X10_RX_PIN      	5 // X10 Controller - Receive (PSC05)
+	#define X10_TX_PIN      	9 // X10 Controller - Transmit (PSC05)
+	#define DHT_PIN       		8 // Digital Humidity and Tempature Sensor (DHT-11)
+	#define RADIO1_CS_PIN  		7 // Serial Peripheral Interface - Chip Select 1 (nRF24L01+)
+	#define RADIO1_CE_PIN   	6 // Serial Peripheral Interface - Chip Enable 1 (nRF24L01+)
+	#define RF_TRANSMIT_PIN 	10 // 315MHz/330MHz/433MHz Radio Frequency Transmitter (RF-433-4A40201 MX-FS-03V)
+	#define SPI_MOSI_PIN    	11 // Serial Peripheral Interface - Master Output, Slave Input (output from master)
+	#define SPI_MISO_PIN    	12 // Serial Peripheral Interface - Master Input, Slave Output (output from slave)
+	#define SPI_SCLK_PIN     	13 // Serial Peripheral Interface - Serial Clock (output from master)
+#else
+	#define UART_TX_PIN     	0 // Universal Asynchronous Receiver Transmitter - Transmit
+	#define UART_RX_PIN     	1 // Universal Asynchronous Receiver Transmitter - Receive
+	#define IR_RECEIVER_PIN		2 // 38KHz Infrared Receiver Module (VS1838B)
+	#define RF_RECEIVER_PIN 	3 // 433MHz Radio Frequency Receiver (RF-433-4A40201 MX-05V)
+	#define X10_RTS_PIN     	4 // X10 Controller - Zero Crossing (PSC05)
+	#define X10_RX_PIN      	5 // X10 Controller - Receive (PSC05)
+	#define X10_TX_PIN      	6 // X10 Controller - Transmit (PSC05)
+	#define DHT_PIN       		7 // Digital Humidity and Tempature Sensor (DHT-11)
+	#define RADIO1_CS_PIN  		8 // Serial Peripheral Interface - Chip Select 1 (nRF24L01+)
+	#define RADIO1_CE_PIN   	9 // Serial Peripheral Interface - Chip Enable 1 (nRF24L01+)
+	#define RF_TRANSMIT_PIN 	10 // 315MHz/330MHz/433MHz Radio Frequency Transmitter (RF-433-4A40201 MX-FS-03V)
+	#define SPI_MOSI_PIN    	11 // Serial Peripheral Interface - Master Output, Slave Input (output from master)
+	#define SPI_MISO_PIN    	12 // Serial Peripheral Interface - Master Input, Slave Output (output from slave)
+	#define SPI_SCLK_PIN     	13 // Serial Peripheral Interface - Serial Clock (output from master)
+#endif
 
 // Analog Pin Usage
 #define LIGHT_DIGITAL_PIN	0 // Digital Light Intensity Sensor Module Photo Resistor

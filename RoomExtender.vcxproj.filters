@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
@@ -13,38 +9,16 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="X10ex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="X10ir.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="X10rf.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RF24.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DHT.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DS3231.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="X10Wireless.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="X10ex.h">
+    <ClInclude Include="DHT.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="X10ir.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="X10rf.h">
+    <ClInclude Include="DS3231.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="nRF24L01.h">
@@ -59,29 +33,52 @@
     <ClInclude Include="RF24_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DHT.h">
+    <ClInclude Include="X10ex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DS3231.h">
+    <ClInclude Include="X10ir.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HW_AVR.h">
+    <ClInclude Include="X10rf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HW_AVR_defines.h">
+    <ClInclude Include="RoomExtender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="X10Wireless.h">
+    <ClInclude Include="Radio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="X10ExSketch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="__vm\.X10ExSketch.vsarduino.h">
+    <ClInclude Include="__vm\.RoomExtender.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="X10ExSketch.ino" />
+    <ClCompile Include="X10rf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DS3231.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="X10ex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="X10ir.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RF24.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DHT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Radio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RoomExtender.ino" />
+    <None Include="X10.ino" />
+    <None Include="X10Scenarios.ino" />
+    <None Include="X10Logging.ino" />
   </ItemGroup>
 </Project>
