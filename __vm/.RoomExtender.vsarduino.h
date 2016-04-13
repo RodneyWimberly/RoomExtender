@@ -17,51 +17,30 @@
 #define ARDUINO 10607
 #define ARDUINO_AVR_UNO
 #define ARDUINO_ARCH_AVR
-#define __cplusplus
+#define __cplusplus 201103L
 #define __AVR__
 #define __inline__
 #define __asm__(x)
 #define __extension__
-//#define __ATTR_PURE__
-//#define __ATTR_CONST__
 #define __inline__
-//#define __asm__ 
 #define __volatile__
 #define GCC_VERSION 40801
 #define volatile(va_arg) 
 #define _CONST
-typedef void *__builtin_va_list;
 #define __builtin_va_start
 #define __builtin_va_end
-//#define __DOXYGEN__
 #define __attribute__(x)
 #define NOINLINE __attribute__((noinline))
 #define prog_void
 #define PGM_VOID_P int
 #ifndef __builtin_constant_p
-#define __builtin_constant_p __attribute__((__const__))
+	#define __builtin_constant_p __attribute__((__const__))
 #endif
 #ifndef __builtin_strlen
-#define __builtin_strlen  __attribute__((__const__))
+	#define __builtin_strlen  __attribute__((__const__))
 #endif
 #define NEW_H
-/*
-#ifndef __ATTR_CONST__
-#define __ATTR_CONST__ __attribute__((__const__))
-#endif
-
-#ifndef __ATTR_MALLOC__
-#define __ATTR_MALLOC__ __attribute__((__malloc__))
-#endif
-
-#ifndef __ATTR_NORETURN__
-#define __ATTR_NORETURN__ __attribute__((__noreturn__))
-#endif
-
-#ifndef __ATTR_PURE__
-#define __ATTR_PURE__ __attribute__((__pure__))
-#endif            
-*/
+typedef void *__builtin_va_list;
 typedef unsigned char byte;
 extern "C" void __cxa_pure_virtual() {;}
 
@@ -86,22 +65,29 @@ extern "C" void __cxa_pure_virtual() {;}
 #define portInputRegister(P)
 #define portModeRegister(P)
 #include <..\RoomExtender\RoomExtender.ino>
+#include <..\RoomExtender\ConfigRegister.cpp>
+#include <..\RoomExtender\ConfigRegister.h>
 #include <..\RoomExtender\DHT.cpp>
 #include <..\RoomExtender\DHT.h>
 #include <..\RoomExtender\DS3231.cpp>
 #include <..\RoomExtender\DS3231.h>
-#include <..\RoomExtender\EEPROM.h>
 #include <..\RoomExtender\EEPROMVar.h>
 #include <..\RoomExtender\EEPROMex.cpp>
 #include <..\RoomExtender\EEPROMex.h>
-#include <..\RoomExtender\IPAddress.cpp>
-#include <..\RoomExtender\IPAddress.h>
+#include <..\RoomExtender\HID.cpp>
+#include <..\RoomExtender\HID.h>
+#include <hardware\avr\HW_AVR.h>
+#include <hardware\avr\HW_AVR_defines.h>
+#include <..\RoomExtender\Property.h>
 #include <..\RoomExtender\RF24.cpp>
 #include <..\RoomExtender\RF24.h>
 #include <..\RoomExtender\RF24_config.h>
 #include <..\RoomExtender\Radio.cpp>
 #include <..\RoomExtender\Radio.h>
+#include <..\RoomExtender\RfPacket.cpp>
+#include <..\RoomExtender\RfPacket.h>
 #include <..\RoomExtender\RoomExtender.h>
+#include <..\RoomExtender\Utilities.ino>
 #include <..\RoomExtender\X10.ino>
 #include <..\RoomExtender\X10Logging.ino>
 #include <..\RoomExtender\X10Scenarios.ino>
@@ -111,8 +97,6 @@ extern "C" void __cxa_pure_virtual() {;}
 #include <..\RoomExtender\X10ir.h>
 #include <..\RoomExtender\X10rf.cpp>
 #include <..\RoomExtender\X10rf.h>
-#include <..\RoomExtender\inttypes.h>
-#include <..\RoomExtender\io.h>
 #include <..\RoomExtender\nRF24L01.h>
 #include <..\RoomExtender\printf.h>
 #endif

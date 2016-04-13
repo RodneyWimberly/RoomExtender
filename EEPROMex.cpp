@@ -101,7 +101,7 @@ bool EEPROMClassEx::readBit(int address, byte bit) {
 	  if (!isReadOk(address+sizeof(uint8_t))) return false;
 	  byte byteVal =  eeprom_read_byte((unsigned char *) address);      
 	  byte bytePos = (1 << bit);
-      return (byteVal & bytePos);
+	  return (byteVal & bytePos);
 }
 
 uint8_t EEPROMClassEx::readByte(int address)
@@ -195,7 +195,7 @@ bool EEPROMClassEx::updateBit(int address, uint8_t bit, bool value)
 	  if (value) {	    
 		byteValOutput |= (1 << bit);  //Set bit to 1
 	  } else {		
-	    byteValOutput &= ~(1 << bit); //Set bit to 0
+		byteValOutput &= ~(1 << bit); //Set bit to 0
 	  }
 	  // Store if different from input
 	  if (byteValOutput!=byteValInput) {

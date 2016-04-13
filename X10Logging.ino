@@ -28,27 +28,30 @@ void printX10Message(const char type[], char house, byte unit, byte command, byt
 	x10Data.commandCode = command;
 	x10Data.extendedData = extData;
 	x10Data.extendedCommand = extCommand;
-	wrPacketTypes packetType = NotSet;
+
+	RfPacket* packet = new RfPacket();
+	packet->Type = NotSet;
+	packet->SourceAddress = 0;
+	packet->DestinationAddress = 1;
+	packet->Success = true;
 	if (type == SERIAL_DATA_MSG)
 	{
-		packetType = SdEventNotification;
+		packet->Type = reSerialDataEvent;
 	}
 	else if (type == POWER_LINE_MSG)
 	{
-		packetType = PlEventNotification;
+		packet->Type = rePowerLineEvent;
 	}
 	else if (type == RADIO_FREQ_MSG)
 	{
-		packetType = RfEventNotification;
+		packet->Type = reRadioFrequencyEvent;
 	}
 	else if (type == INFRARED_MSG)
 	{
-		packetType = IrEventNotification;
-	}
-	size_t size = sizeof(data);
-	char buffer[size];
-	memcpy(buffer, &data, size);
-	radio.sendPacket(packetType, &buffer, size);
+		packet->Type = reInfaredEvent;
+	} 
+	packet->writeBody(&x10Data, sizeof(x10Data));
+	radio.sendPacket(packet);
 #if DEBUG
 	printDebugX10Message(type, house, unit, command, extData, extCommand, remainingBits);
 #endif
@@ -118,12 +121,14 @@ void wrPrintModuleState(char house, byte unit, bool printUnseenModules)
 		}
 	}
 
-	size_t size = sizeof(data);
-	char buffer[size];
-	memcpy(buffer, &data, size);
-	radio.sendPacket(X10ExtendedResponse, buffer, size);
+	RfPacket *rfPacket = new RfPacket();
+	rfPacket->Type = reX10Extended;
+	rfPacket->SourceAddress = 0;
+	rfPacket->DestinationAddress = 1;
+	rfPacket->Success = true;
+	rfPacket->writeBody(&moduleStatus, sizeof(moduleStatus));
+	radio.sendPacket(rfPacket);
 }
-
 
 void printX10ByteAsHex(byte data)
 {
@@ -131,45 +136,6 @@ void printX10ByteAsHex(byte data)
 	if (data <= 0xF) { Serial.print("0"); }
 	Serial.print(data, HEX);
 }
-
-byte charHexToDecimal(byte input)
-{
-	// 0123456789  =>  0-15
-	if (input >= 0x30 && input <= 0x39) input -= 0x30;
-	// ABCDEF  =>  10-15
-	else if (input >= 0x41 && input <= 0x46) input -= 0x37;
-	// Return converted byte
-	return input;
-}
-
-byte stringToDecimal(const char input[], byte startPos, byte endPos)
-{
-	byte decimal = 0;
-	byte multiplier = 1;
-	for (byte i = endPos + 1; i > startPos; i--)
-	{
-		if (input[i - 1] >= 0x30 && input[i - 1] <= 0x39)
-		{
-			decimal += (input[i - 1] - 0x30) * multiplier;
-			multiplier *= 10;
-		}
-		else if (multiplier > 1)
-		{
-			break;
-		}
-	}
-	return decimal;
-}
-
-short stringIndexOf(const char string[], char find, byte startPos, byte endPos, short notFoundValue)
-{
-	char *ixStr = strchr(string + startPos, find);
-	return
-		ixStr - string < 0 || (endPos > 0 && ixStr - string > endPos) ?
-		notFoundValue : ixStr - string;
-}
-
-
 
 /******************************************************************************************
 /* Debug Helpers

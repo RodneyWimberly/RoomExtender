@@ -39,9 +39,6 @@
     <ClInclude Include="X10ir.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="X10rf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="RoomExtender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -54,25 +51,28 @@
     <ClInclude Include="EEPROMVar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inttypes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="io.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EEPROM.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="__vm\.RoomExtender.vsarduino.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IPAddress.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="hardware\avr\HW_AVR.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="hardware\avr\HW_AVR_defines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RfPacket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Property.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="X10rf.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HID.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigRegister.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="__vm\.RoomExtender.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -101,7 +101,13 @@
     <ClCompile Include="EEPROMex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IPAddress.cpp">
+    <ClCompile Include="RfPacket.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HID.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigRegister.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -110,5 +116,6 @@
     <None Include="X10.ino" />
     <None Include="X10Scenarios.ino" />
     <None Include="X10Logging.ino" />
+    <None Include="Utilities.ino" />
   </ItemGroup>
 </Project>

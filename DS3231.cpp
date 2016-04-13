@@ -427,9 +427,9 @@ uint8_t	DS3231::_decode(uint8_t value)
 uint8_t DS3231::_decodeH(uint8_t value)
 {
   if (value & 128)
-    value = (value & 15) + (12 * ((value & 32) >> 5));
+	value = (value & 15) + (12 * ((value & 32) >> 5));
   else
-    value = (value & 15) + (10 * ((value & 48) >> 4));
+	value = (value & 15) + (10 * ((value & 48) >> 4));
   return value;
 }
 

@@ -7,33 +7,22 @@ void handleInterrupt_wrapper()
 	if (radioInstance) radioInstance->handleInterrupt();
 }
 
-Radio::Radio(
-		uint8_t cePin, 
-		uint8_t csPin, 
-		uint8_t irqPin,
-		radioCallback_t radioCallback)
+Radio::Radio(uint8_t cePin, uint8_t csPin, uint8_t irqPin, radioCallback_t radioCallback)
 {
 	this->irqPin = irqPin;
 	this->radio = new RF24(cePin, csPin);
+	this->packet = new RfPacket();
 	this->radioCallback = radioCallback;
 	radioInstance = this;
 }
 
-void Radio::begin(IPAddress receiveAddress, IPAddress sendAddress, bool useIrq)
+void Radio::begin(uint8_t myAddress, uint64_t myPipeAddress, uint64_t pipe1Address, uint64_t pipe2Address, bool useIrq)
 {
-	uint8_t rxAddress[5];
-	memcpy(rxAddress, &receiveAddress, sizeof(receiveAddress));
-	rxAddress[4] = 0;
-	
-	uint8_t txAddress[5];
-	memcpy(txAddress, &sendAddress, sizeof(sendAddress));
-	txAddress[4] = 0;
-	
-	begin(rxAddress, txAddress, useIrq);
-}
-
-void Radio::begin(uint64_t receiveAddress, uint64_t sendAddress, bool useIrq)
-{
+	this->myAddress = myAddress;
+	this->myPipeAddress = myPipeAddress;
+	this->pipe1Address = pipe1Address;
+	this->pipe2Address = pipe2Address;
+	this->useIrq = useIrq;
 	radio->begin();
 	radio->setChannel(1);
 	radio->setPALevel(RF24_PA_MAX);
@@ -41,64 +30,104 @@ void Radio::begin(uint64_t receiveAddress, uint64_t sendAddress, bool useIrq)
 	radio->setAutoAck(1);
 	radio->setRetries(15, 15);
 	radio->setCRCLength(RF24_CRC_8);
-	radio->openWritingPipe(sendAddress);
-	radio->openReadingPipe(0, sendAddress);
-	radio->openReadingPipe(1, receiveAddress);
+	radio->openWritingPipe(this->myPipeAddress);
+	radio->openReadingPipe(0, this->myPipeAddress);
+	radio->openReadingPipe(1, this->pipe1Address);
+	radio->openReadingPipe(2, this->pipe2Address);
 	radio->enableDynamicPayloads();
-	radio->startListening();
 	radio->powerUp();
-	this->useIrq = useIrq;
-	if (this->useIrq) 
-	{ 
+	radio->startListening();
+
+	radio->printDetails();
+	if (this->useIrq)
+	{
 		attachInterrupt(this->irqPin, handleInterrupt_wrapper, LOW);
-	} 
+	}
 }
 
 void Radio::handleInterrupt(void)
 {
 	bool tx, fail, rx;
-	radio->whatHappened(tx, fail, rx);   
-	if(tx || fail) 
+	radio->whatHappened(tx, fail, rx);
+	printf("handleInterrupt TX:%x RX:%x Fail:%x\r\n", tx, rx, fail);
+	if (tx || fail)
 	{
 		radio->flush_tx();
-		radio->startListening(); 
-	}  
+		radio->startListening();
+	}
 	if (rx) { receivePacket(); }
 }
 
 void Radio::receivePacket()
 {
-	while (radio->available())
+	printf("receivePacket start\r\n");
+	while (radio->available(&this->pipeNumber))
 	{
+		printf("receivePacket PipeNumber:%x\r\n", this->pipeNumber);
 		uint8_t length = radio->getDynamicPayloadSize();
-		if(length < 1) { return; }
-		radio->read(&payload, length);
+		printf("receivePacket Payload Size:%x\r\n", length);
+		if (length < 1) return;
 
-		wrPacketTypes wrPacketType = (wrPacketTypes)payload[0];
-		if(radioCallback)
+		byte bytes[length];
+		radio->read(&bytes, length);
+		this->packet->writeBytes(bytes, length);
+		this->packet->printDetails();
+
+		if (radioCallback)
 		{
-			const uint8_t bufferLength = length - 1;
-			char buffer[bufferLength];
-			memcpy(payload + 1, buffer, bufferLength);
-			radioCallback(this, wrPacketType, &payload, length);
+			printf("receivePacket radioCallback\r\n");
+			radioCallback(this, this->packet, this->pipeNumber);
 		}
 	}
+	printf("receivePacket end\r\n");
 }
 
-void Radio::sendPacket(wrPacketTypes wrPacketType, const void* buffer, uint8_t length)
+void Radio::sendAckPacket(RfPacket* rfPacket)
+{
+	if (!this->pipeNumber) return;
+
+	radio->stopListening();
+	radio->flush_tx();
+	this->packet = rfPacket;
+	// Normal delay will not work here, so cycle through some no-operations (16nops @16mhz = 1us delay)
+	for (uint32_t i = 0; i<130; i++) {
+		__asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t");
+	}
+
+	byte bytes[32];
+	size_t bytesLength = this->packet->readBytes(bytes);
+
+	radio->writeAckPayload(this->pipeNumber, &bytes, bytesLength);
+	radio->flush_tx();
+	radio->startListening();
+}
+
+void Radio::sendPacket(RfPacket* rfPacket)
 {
 	radio->stopListening();
 	radio->flush_tx();
-	const byte* current = reinterpret_cast<const byte*>(buffer);
-	payload[0] = wrPacketType;
-	memcpy(payload + 1, current, length);
-	if(this->useIrq)
+	this->packet = rfPacket;
+	byte bytes[32];
+	size_t bytesLength = this->packet->readBytes(bytes);
+
+	if (this->useIrq)
 	{
-		radio->startWrite(&payload, length + 1, 0);
+		radio->startWrite(&bytes, bytesLength, 0);
 	}
 	else
 	{
-		radio->write(&payload, length + 1);
+		radio->write(&bytes, bytesLength);
 		radio->startListening();
 	}
 }
+
+RfPacket* Radio::createPacket(uint8_t type, uint8_t destinationAddress)
+{
+	RfPacket* packet = new RfPacket();
+	packet->Type = type;
+	packet->DestinationAddress = destinationAddress;
+	packet->SourceAddress = this->myAddress;
+
+	return packet;
+}
+

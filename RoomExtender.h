@@ -20,7 +20,40 @@
 #ifndef RoomExtender_h
 #define RoomExtender_h
 
+// Enable Hardware Options
+#define ENABLE_X10_IR			0
+#define ENABLE_X10_RF			0
+#define ENABLE_X10_SCENARIO		0
+#define ENABLE_RTC				1
+#define ENABLE_DHT				1
+#define ENABLE_HID				0
+
+// Includes
+#include "HID.h"
+#include <Arduino.h>
+#include <SPI.h>
+#include "EEPROMex.h"
+#include "Radio.h"
+#include "X10ex.h"
+#include "printf.h"
+#include "HID.h"
+#include "ConfigRegister.h"
+
+#if ENABLE_DHT
+#include "DHT.h"
+#endif
+
+#if ENABLE_RTC
 #include "DS3231.h"
+#endif
+
+#if ENABLE_X10_IR
+#include "X10ir.h"
+#endif
+
+#if ENABLE_X10_RF
+#include "X10rf.h"
+#endif
 
 #define DEBUG 1
 
@@ -48,7 +81,9 @@
 
 // Digital Pin Usage
 #if USE_UNO
+#if ENABLE_DHT
 	#define DHT_TYPE			DHT11
+#endif
 	#define UART_TX_PIN     	0 // Universal Asynchronous Receiver Transmitter - Transmit
 	#define UART_RX_PIN     	1 // Universal Asynchronous Receiver Transmitter - Receive
 	#define IR_RECEIVER_PIN		2 // 38KHz Infrared Receiver Module (VS1838B)
@@ -64,7 +99,9 @@
 	#define SPI_MISO_PIN    	12 // Serial Peripheral Interface - Master Input, Slave Output (output from slave)
 	#define SPI_SCLK_PIN     	13 // Serial Peripheral Interface - Serial Clock (output from master)
 #else
+#if ENABLE_DHT
 	#define DHT_TYPE			DHT22
+#endif
 	#define UART_TX_PIN     	0 // Universal Asynchronous Receiver Transmitter - Transmit
 	#define UART_RX_PIN     	1 // Universal Asynchronous Receiver Transmitter - Receive
 	#define IR_RECEIVER_PIN		2 // 38KHz Infrared Receiver Module (VS1838B)
@@ -81,13 +118,6 @@
 	#define SPI_SCLK_PIN     	13 // Serial Peripheral Interface - Serial Clock (output from master)
 #endif
 
-#define ENABLE_X10_IR			0
-#define ENABLE_X10_RF			0
-#define ENABLE_X10_SCENARIO		0
-#define ENABLE_RTC				1
-#define ENABLE_DHT				1
-#define ENABLE_HID				0
-
 // Analog Pin Usage
 #define LIGHT_DIGITAL_PIN	0 // Digital Light Intensity Sensor Module Photo Resistor
 #define LIGHT_ANALOG_PIN	1 // Digital Light Intensity Sensor Module Photo Resistor
@@ -98,22 +128,6 @@
 #define ANALOG_PIN_6		6 // Not Used
 #define ANALOG_PIN_7		7 // Not Used
 
-// I2C Addresses 
-#define HID_I2C_ADDRESS		9 // (HID module)
-
-const int maxAllowedWrites = 20;
-const int memBase = 120;
-
-typedef enum {
-	InstructionSetKeyRate,
-	InstructionGetKey,
-	InstructionLcdClear,
-	InstructionLcdSetCursor,
-	InstructionLcdPrint,
-	InstructionLcdPrintLine,
-	InstructionLcdWrite,
-	InstructionLcdCommand
-} InstructionTypes;
 
 
 struct X10Data_s
@@ -136,6 +150,7 @@ struct X10ModuleStatus_s
 	uint8_t dimPercentage;
 } ;
 
+#if ENABLE_DHT
 struct EnvironmentData_s
 {
 	float humidity;
@@ -144,10 +159,13 @@ struct EnvironmentData_s
 	float heatIndexC;
 	float heatIndexH;
 };
+#endif
 
+#if ENABLE_RTC
 struct ClockData_s
 {
 	Time time;
 };
+#endif
 
 #endif
