@@ -1,5 +1,10 @@
 # HA4IoT Arduino Room Extender
 
+Notes for using this project:
+1. This is a Visual Studio 2015 soultion created using the Visual Micro plug-in.
+2. This project still should be able to be used with the Arduino IDE if you don't have 1. 
+3. The contents of the libraries subfolder should be placed into the shared library location
+
 /****************************************************************************/
 /* X10 PLC, RF, IR library w/ nRF24L01+ 2.4 GHz Wireless Transceiver Support*/
 /* I have only tested this on the PSC05 X10 PowerLine Interface (PLC).		*/
