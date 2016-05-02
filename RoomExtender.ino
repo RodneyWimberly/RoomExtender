@@ -1,13 +1,17 @@
+#include <DfrLcdKeypad.h>
 #include "RoomExtender.h"
 
-unsigned long sdReceived;
-char bmHouse;
-byte bmUnit;
-byte bmCommand;
-byte bmExtCommand; 
+// Local variables used by the X10 Libraries
+unsigned long p_sdReceived;
+X10Data_s p_x10Data;
+HeaderTypes p_headerType = HeaderTypes::notSet;
+
+// Local variable to track the elapsed time
+// This is used each loop to determine when the proper timeout has occurred 
+// When the timeout occurs we will process certain events and reset the elapsed time.
+elapsedMillis p_elapsedTimer;
 
 // X10 Power Line Communication Library
-void powerLineEvent(char house, byte unit, byte command, byte extData, byte extCommand, byte remainingBits);
 X10ex x10ex(
 	X10_IRQ,			// Zero Cross Interrupt Number (2 = "Custom" Pin Change Interrupt)
 	X10_RTS_PIN,		// Zero Cross Interrupt Pin (Pin 4-7 can be used with interrupt 2)
@@ -20,32 +24,28 @@ X10ex x10ex(
 	);
 
 // nRF24L01+ 2.4 GHz Wireless Transceiver
-void wirelessEvent(Radio* radio, RfPacket* rfPacket, uint8_t pipeNumber);
-Radio radio(
-	RADIO1_CE_PIN,
-	RADIO1_CS_PIN,
-	RADIO1_IRQ,
-	&wirelessEvent);
+RF24 radio(RADIO1_CE_PIN, RADIO1_CS_PIN);
+
+// Add OSI layer 3 network to the nRF24L01+ radio
+RF24Network network(radio);
 
 #if ENABLE_X10_RF
 // X10 RF Receiver Library
-void radioFreqEvent(char house, byte unit, byte command, bool isRepeat);
 X10rf x10rf(
-RF_IRQ, // Receive Interrupt Number (0 = Standard Arduino External Interrupt)
-RF_RECEIVER_PIN, // Receive Pin (Pin 2 must be used with interrupt 0)
-&radioFreqEvent // Event triggered when RF message is received
-);
+	RF_IRQ, // Receive Interrupt Number (0 = Standard Arduino External Interrupt)
+	RF_RECEIVER_PIN, // Receive Pin (Pin 2 must be used with interrupt 0)
+	&radioFreqEvent // Event triggered when RF message is received
+	);
 #endif
 
 #if ENABLE_X10_IR
 // X10 Infrared Receiver Library
-void infraredEvent(char house, byte unit, byte command, bool isRepeat);
 X10ir x10ir(
-IR_IRQ, // Receive Interrupt Number (1 = Standard Arduino External Interrupt)
-IR_RECEIVER_PIN, // Receive Pin (Pin 3 must be used with interrupt 1)
-'A', // Default House Code
-&infraredEvent // Event triggered when IR message is received
-);
+	IR_IRQ, // Receive Interrupt Number (1 = Standard Arduino External Interrupt)
+	IR_RECEIVER_PIN, // Receive Pin (Pin 3 must be used with interrupt 1)
+	'A', // Default House Code
+	&infraredEvent // Event triggered when IR message is received
+	);
 #endif
 
 #if ENABLE_DHT
@@ -58,57 +58,130 @@ DHT dht(DHT_PIN, DHT_TYPE);
 DS3231 rtc(SDA, SCL);
 #endif
 
+#if ENABLE_HID
 // Human Input Device
-HID hid(&radio);
+HidClient hidClient(&network);
+#endif
 
 // Configuration Register loaded from EEPROM
-ConfigRegister configRegister;
+//ConfigRegister configRegister;
 
 void setup()
 {
-	// Remember to set baud rate in Serial Monitor or lower this to 9600 (default value)
-	Serial.begin(115200);
+	// Setup to allow printf (etc) to work when called from any libraries
 	printf_begin();
 
+	// Remember to set baud rate in Serial Monitor or lower this to 9600 (default value)
+	Serial.begin(115200);
+
 	// Read the Config Register from EEPROM
-	configRegister.begin();
-	
-	// Start the x10 PLC, RF and IR libraries
+	//configRegister.begin();
+
+	// Start the x10 PLC Library
 	x10ex.begin();
+
 #if ENABLE_X10_RF
+	// Start the X10 RF library
 	x10rf.begin();
 #endif
+
 #if ENABLE_X10_IR
+	// Start the X10 IR library
 	x10ir.begin();
 #endif
+
 #if ENABLE_DHT
 	// Start Temperature / Humidity Sensor
 	dht.begin();
 #endif
+
 #if ENABLE_RTC
 	// Start Real-Time Clock interface
 	rtc.begin();
 #endif
-	// Start the nRF24L01+ library
-	radio.begin(configRegister.ReAddress, ROOM_EXTENDER_PIPE_ADDRESS, HOST_PIPE_ADDRESS, HUMAN_INPUT_DEVICE_PIPE_ADDRESS, true);
-	
-	// Start the Human Input Device
-	hid.begin(configRegister.HidAddress);
 
-	Serial.println("X10Ex has loaded and is now monitoring for new events!");
+	// Start the nRF24L01+ library
+	SPI.begin();
+	radio.begin();
+	radio.setPALevel(RF24_PA_HIGH);
+	radio.setDataRate(RF24_250KBPS);
+	network.begin(RADIO_CHANNEL, RE_RADIO_NODE_ID);
+
+#if ENABLE_HID
+	// Start the Human Input Device
+	hidClient.begin(RE_RADIO_NODE_ID, HID_RADIO_NODE_ID);
+#endif
+
+	// Set time so it will immediately expire and we won't have to wait for the first update.
+	p_elapsedTimer = POLL_INTERVAL_DISPLAY;
+
+	Serial.println(F("X10Ex has loaded and is now monitoring for new events!"));
 }
 
-void loop() 
+void loop()
 {
-	while (Serial.available())
+	network.update();
+	while (network.available())
+		processIncommingRequests();
+	processOutgoingRequests();
+}
+
+void processIncommingRequests()
+{
+	RF24NetworkHeader header;
+	uint16_t length = network.peek(header);
+	IF_SERIAL_DEBUG(printf_P(PSTR("%lu: APP Received request from 0%o type %d\n\r"), millis(), header.from_node, header.type));
+	switch ((HeaderTypes)header.type)
 	{
-		Serial.println("lcdPrint");
-		char foo[32];
-		size_t l = Serial.readBytes(foo, 32);
-		Serial.println(l);
-		hid.lcdClear();
-		hid.lcdPrint(foo, l);
+	case HeaderTypes::reX10Standard:
+		x10RequestEvent(header, length);
+		break;
+	case HeaderTypes::reX10ModuleStatus:
+		x10RequestEvent(header, length);
+		break;
+	case HeaderTypes::reEnvironmentSensor:
+		environmentRequestEvent(header, length);
+		break;
+	case HeaderTypes::reSetClock:
+		setClockRequestEvent(header, length);
+		break;
+	case HeaderTypes::reReadClock:
+		readClockRequestEvent(header, length);
+		break;
+	default:
+		Serial.print("Invalid type,");
+		Serial.print(header.type);
+		Serial.println(" throwing away this message");
+		network.read(header, 0, 0);
+		break;
 	}
+}
+
+void processOutgoingRequests()
+{
+#if ENABLE_HID
+	if (p_headerType != HeaderTypes::notSet)
+	{
+		RF24NetworkHeader header(HID_RADIO_NODE_ID, p_headerType);
+		network.multicast(header, &p_x10Data, sizeof(X10Data_s), 1);
+		p_headerType = HeaderTypes::notSet;
+	}
+	if (p_elapsedTimer > POLL_INTERVAL_DISPLAY)
+	{
+		p_elapsedTimer = 0;
+		displayTime();
+		displayTemperature();
+	}
+	KeyPadButtons key = KeyPadButtons::None;
+	key = hidClient.waitForKey(15);
+	if (key != KeyPadButtons::None)
+	{
+		if (key == KeyPadButtons::Down)
+			process3BMessage(WIRELESS_DATA_MSG, 'M', 0, 3);
+		else if (key == KeyPadButtons::Up)
+			process3BMessage(WIRELESS_DATA_MSG, 'M', 0, 2);
+	}
+#endif
 }
 
 void serialEvent()
@@ -122,28 +195,26 @@ void serialEvent()
 		if (process3BMessage(SERIAL_DATA_MSG, byte1, byte2, byte3))
 		{
 			// Return error message if message sent to X10ex was not buffered successfully
-			Serial.print(SERIAL_DATA_MSG);
-			Serial.println(MSG_BUFFER_ERROR);
+			Serial.print(F(SERIAL_DATA_MSG));
+			Serial.println(F(MSG_BUFFER_ERROR));
 		}
-		sdReceived = 0;
+		p_sdReceived = 0;
 	}
 	// If partial message was received
 	if (Serial.available() && Serial.available() < 3)
 	{
 		// Store received time
-		if (!sdReceived)
+		if (!p_sdReceived)
 		{
-			sdReceived = millis();
+			p_sdReceived = millis();
 		}
 		// Clear message if all bytes were not received within threshold
-		else if (sdReceived > millis() || (millis() - sdReceived) > SERIAL_DATA_THRESHOLD)
+		else if (p_sdReceived > millis() || (millis() - p_sdReceived) > SERIAL_DATA_THRESHOLD)
 		{
-			bmHouse = 0;
-			bmExtCommand = 0;
-			sdReceived = 0;
-			Serial.print(SERIAL_DATA_MSG);
-			Serial.println(MSG_RECEIVE_TIMEOUT);
-	  
+			p_sdReceived = 0;
+			Serial.print(F(SERIAL_DATA_MSG));
+			Serial.println(F(MSG_RECEIVE_TIMEOUT));
+
 			// Clear serial input buffer
 			while (Serial.read() != -1);
 		}
@@ -211,99 +282,73 @@ void infraredEvent(char house, byte unit, byte command, bool isRepeat)
 }
 #endif
 
-void printWirelessEvent(RfPacket* rfPacket, uint8_t pipeNumber, const byte* current)
+void writeToNetwork(uint16_t fromNode, unsigned char type, const void* message, uint16_t length)
 {
-	Serial.print(millis());
-	Serial.println(": wirelessEvent Fired!");
-
-	Serial.print("Pipe Number: ");
-	Serial.println(pipeNumber);
-
-	Serial.print("Source Address: ");
-	Serial.println(rfPacket->SourceAddress);
-
-	Serial.print("Destination Address: ");
-	Serial.println(rfPacket->DestinationAddress);
-
-	uint8_t type = rfPacket->Type;
-	Serial.print("PacketType: ");
-	Serial.println((PacketTypes)type);
-
-	uint8_t length = sizeof(current);
-	for (int i = 0; i < length; i++)
-	{
-		Serial.print("Current [");
-		Serial.print(i);
-		Serial.print("]: ");
-		Serial.println(current[i]);
-	}
-}
-
-// Process messages from the wireless transceiver 
-void wirelessEvent(Radio* radio, RfPacket* rfPacket, uint8_t pipeNumber)
-{
-	const byte* current = reinterpret_cast<const byte*>(rfPacket->readBody());
-	printWirelessEvent(rfPacket, pipeNumber, current);
-	
-	// Is this an ACK, if so send it back to the original sender
-	if (pipeNumber == 0)
-	{
-		if (rfPacket->DestinationAddress == HUMAN_INPUT_DEVICE_PIPE_ADDRESS)
-		{
-			hid.processAck(rfPacket);
-		}
-	}
-
-	if (rfPacket->Type == reX10Standard || rfPacket->Type == reX10Extended)
-	{
-		x10RequestEvent(radio, rfPacket);
-	}
-#if ENABLE_DHT
-	else if (rfPacket->Type == reEnvironmentSensor)
-	{
-		environmentRequestEvent(radio, rfPacket);
-	}
-#endif
-#if ENABLE_RTC
-	else if (rfPacket->Type == reSetClock)
-	{
-		setClockRequestEvent(radio, rfPacket);
-	}
-	else if (rfPacket->Type == reReadClock)
-	{
-		readClockRequestEvent(radio, rfPacket);
-	}
-#endif
+	RF24NetworkHeader header = RF24NetworkHeader(fromNode, type);
+	network.write(header, &message, length);
 }
 
 // Process X10 commands received from RF24L01+
-void x10RequestEvent(Radio* radio, RfPacket* rfPacket)
+void x10RequestEvent(RF24NetworkHeader& header, uint16_t length)
 {
-	Serial.println("x10RequestEvent");
+	Serial.println(F("x10RequestEvent"));
 
-	const byte* current = reinterpret_cast<const byte*>(rfPacket->readBody());
-	X10Data_s x10Data;
-	x10Data.houseCode = current[1];
-	x10Data.unitCode = current[2];
-	x10Data.commandCode = current[3];
-	//x10Data.extendedCommand = current[5];
-	//x10Data.extendedData = current[8];
+	X10Data_s data;
+	network.read(header, &data, sizeof(data));
 
-	rfPacket->Success = !process3BMessage(WIRELESS_DATA_MSG, x10Data.houseCode, x10Data.unitCode, x10Data.commandCode);
-	if(!rfPacket->Success)
+	data.success = !process3BMessage(WIRELESS_DATA_MSG, data.houseCode, data.unitCode, data.commandCode);
+	if (!data.success)
 	{
-		Serial.print(WIRELESS_DATA_MSG);
-		Serial.println(MSG_BUFFER_ERROR);
+		Serial.print(F(WIRELESS_DATA_MSG));
+		Serial.println(F(MSG_BUFFER_ERROR));
 	}
-	radio->sendAckPacket(rfPacket);
-	return;
+
+	writeToNetwork(header.from_node, header.type, &data, sizeof(data));
+}
+
+// Get the X10 module status and send back via RF24L01+
+void x10ModuleState(RF24NetworkHeader& header, uint16_t length)
+{
+	Serial.println(F("x10ModuleState"));
+
+	X10Data_s data;
+	network.read(header, &data, sizeof(data));
+
+	X10state state = x10ex.getModuleState(data.houseCode, data.unitCode);
+	X10info info = x10ex.getModuleInfo(data.houseCode, data.unitCode);
+	X10ModuleStatus_s moduleStatus;
+
+	if (state.isSeen)
+	{
+		moduleStatus.houseCode = data.houseCode;
+		moduleStatus.unitCode = data.unitCode;
+
+		if (info.type)
+		{
+			moduleStatus.type = info.type;
+		}
+		if (strlen(info.name))
+		{
+			moduleStatus.name = info.name;
+		}
+		moduleStatus.stateIsKnown = state.isKnown;
+		if (state.isKnown)
+		{
+			moduleStatus.stateIsOn = state.isOn;
+			if (state.data)
+			{
+				moduleStatus.dimPercentage = x10ex.x10BrightnessToPercent(state.data);
+			}
+		}
+	}
+	writeToNetwork(header.from_node, header.type, &moduleStatus, sizeof(X10ModuleStatus_s));
 }
 
 #if ENABLE_DHT
 // Process environment request (Temperature/Humidity) received from RF24L01+
-void environmentRequestEvent(Radio* radio, RfPacket* rfPacket)
+void environmentRequestEvent(RF24NetworkHeader& header, uint16_t length)
 {
-	Serial.println("environmentRequestEvent");
+	Serial.println(F("environmentRequestEvent"));
 	EnvironmentData_s data;
 	// Reading temperature or humidity takes about 250 milliseconds!
 	// Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
@@ -313,46 +358,72 @@ void environmentRequestEvent(Radio* radio, RfPacket* rfPacket)
 	// Read temperature as Fahrenheit (isFahrenheit = true)
 	data.temperatureF = dht.readTemperature(true);
 	// Check if any reads failed and exit early (to try again).
-	rfPacket->Success = !(isnan(data.humidity) || isnan(data.temperatureC) || isnan(data.temperatureF));
-	if (rfPacket->Success)
+	data.success = !(isnan(data.humidity) || isnan(data.temperatureC) || isnan(data.temperatureF));
+	if (data.success)
 	{
 		// Compute heat index in Fahrenheit (the default)
 		data.heatIndexH = dht.computeHeatIndex(data.temperatureF, data.humidity);
 		// Compute heat index in Celsius (isFahreheit = false)
 		data.heatIndexC = dht.computeHeatIndex(data.temperatureC, data.humidity, false);
 	}
-	
-	rfPacket->writeBody(&data, sizeof(data));
-	radio->sendAckPacket(rfPacket);
+
+	writeToNetwork(header.from_node, header.type, &data, sizeof(data));
 }
+
+#if ENABLE_HID
+void displayTemperature()
+{
+	String temperature = String(dht.readTemperature(true));
+	char display[6];
+	temperature.toCharArray(display, 6, 0);
+	hidClient.lcdWriteAt(0, 1, display, 5);
+	hidClient.lcdCustomCharacterAt(5, 1, CustomCharacters::DegreeFahrenheit);
+
+	String humidity = String(dht.readHumidity()).substring(0, 2) + String("%");
+	humidity.toCharArray(display, 4, 0);
+	hidClient.lcdWriteAt(8, 1, display, 3);
+}
+#endif
 #endif
 
 #if ENABLE_RTC
 // Process set clock request received from RF24L01+
-void setClockRequestEvent(Radio* radio, RfPacket* rfPacket)
+void setClockRequestEvent(RF24NetworkHeader& header, uint16_t length)
 {
-	Serial.println("setClockRequestEvent");
+	Serial.println(F("setClockRequestEvent"));
 	ClockData_s data;
-	byte* current = reinterpret_cast<byte*>(rfPacket->readBody());
-	memcpy(&data, current, rfPacket->BodyLength);
+	network.read(header, &data, sizeof(data));
 
 	rtc.setDOW(data.time.dow);
 	rtc.setTime(data.time.hour, data.time.min, data.time.sec);
 	rtc.setDate(data.time.date, data.time.mon, data.time.year);
-	rfPacket->Success = true;
-	radio->sendAckPacket(rfPacket);
+
+	data.success = true;
+	writeToNetwork(header.from_node, header.type, &data, sizeof(data));
 }
 
 // Process read clock request received from RF24L01+
-void readClockRequestEvent(Radio* radio, RfPacket* rfPacket)
+void readClockRequestEvent(RF24NetworkHeader& header, uint16_t length)
 {
-	Serial.println("readClockRequestEvent");
+	Serial.println(F("readClockRequestEvent"));
 	ClockData_s data;
 	data.time = rtc.getTime();
+	data.success = true;
 
-	rfPacket->Success = true;
-	rfPacket->writeBody(&data, sizeof(data));
-	radio->sendAckPacket(rfPacket);
+	writeToNetwork(header.from_node, header.type, &data, sizeof(data));
 }
+#if ENABLE_HID
+void displayTime()
+{
+	Time time = rtc.getTime();
+	uint8_t hour = time.hour - (time.hour > 12 ? 12 : 0);
+	String sTime = String(hour > 9 ? "" : "0") + String(hour) + ":" +
+		String(time.min > 9 ? "" : "0") + String(time.min) + " " +
+		(time.hour > 12 ? "PM" : "AM");
+	char display[9];
+	sTime.toCharArray(display, 9, 0);
+	hidClient.lcdWriteAt(0, 0, display, 8);
+}
+#endif
 #endif
 

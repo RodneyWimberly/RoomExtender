@@ -15,61 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DHT.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DS3231.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="nRF24L01.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="printf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RF24.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RF24_config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="X10ex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="X10ir.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="RoomExtender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Radio.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EEPROMex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EEPROMVar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="hardware\avr\HW_AVR.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="hardware\avr\HW_AVR_defines.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RfPacket.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Property.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="X10rf.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HID.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ConfigRegister.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HidClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="__vm\.RoomExtender.vsarduino.h">
@@ -77,37 +29,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="X10rf.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DS3231.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="X10ex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="X10ir.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RF24.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DHT.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Radio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EEPROMex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RfPacket.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HID.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ConfigRegister.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HidClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -18,6 +18,8 @@ ConfigRegister::ConfigRegister(long defaultValue) : p_defaultValue(defaultValue)
 	HidAddress.Set_Class(this);
 	HidAddress.Set_Get(&ConfigRegister::getHidAddress);
 	HidAddress.Set_Set(&ConfigRegister::setHidAddress);
+
+	p_configRegister = NULL;
 }
 
 void ConfigRegister::begin()
@@ -27,6 +29,12 @@ void ConfigRegister::begin()
 
 	p_configRegister = new EEPROMVar<long>(p_defaultValue);
 	p_configRegister->restore();
+}
+
+ConfigRegister::~ConfigRegister()
+{
+	if(p_configRegister)
+		delete p_configRegister;
 }
 
 uint8_t ConfigRegister::getHostAddress()

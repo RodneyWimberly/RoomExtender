@@ -1,15 +1,13 @@
-#include "Arduino.h" 
-#include "X10ex.h"
 #include "RoomExtender.h"
-
-/******************************************************************************************
-/* X10 Methods
-/******************************************************************************************/
 
 // Processes and executes 3 byte serial and wireless messages
 bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 {
 	bool x10exBufferError = 0;
+	char bmHouse;
+	byte bmUnit,
+		bmCommand, 
+		bmExtCommand;
 	// Convert byte2 from hex to decimal unless command is request module state
 	if (byte1 != 'R') byte2 = charHexToDecimal(byte2);
 	// Convert byte3 from hex to decimal unless command is wipe module state
@@ -45,6 +43,7 @@ bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 		{
 			bmExtCommand = data;
 		}
+
 		// Extended command set, we must be receiving extended data
 		else
 		{
@@ -59,17 +58,17 @@ bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 	{
 		byte scenario = byte2 * 16 + byte3;
 		Serial.print(type);
-		Serial.print("S");
-		if (scenario <= 0xF) { Serial.print("0"); }
+		Serial.print(F("S"));
+		if (scenario <= 0xF) { Serial.print(F("0")); }
 		Serial.println(scenario, HEX);
-		handleSdScenario(scenario);
+		handleSdScenario(scenario); 
 	}
 #endif
 	// Check if request module state command was received (byte1 = Request State Character, byte2 = House, byte3 = Unit)
 	else if (byte1 == 'R' && ((byte2 >= 'A' && byte2 <= 'P') || byte2 == '*'))
 	{
 		Serial.print(type);
-		Serial.print("R");
+		Serial.print(F("R"));
 		Serial.print(byte2);
 		// All modules
 		if (byte2 == '*')
@@ -102,18 +101,18 @@ bool process3BMessage(const char type[], byte byte1, byte byte2, byte byte3)
 	else if (byte1 == 'R' && byte2 == 'W' && ((byte3 >= 'A' && byte3 <= 'P') || byte3 == '*'))
 	{
 		Serial.print(type);
-		Serial.print("RW");
+		Serial.print(F("RW"));
 		Serial.println((char)byte3);
 		x10ex.wipeModuleState(byte3);
-		Serial.print(MODULE_STATE_MSG);
+		Serial.print(F(MODULE_STATE_MSG));
 		Serial.print(byte3 >= 'A' && byte3 <= 'P' ? (char)byte3 : '*');
-		Serial.println("__");
+		Serial.println(F("__"));
 	}
 	// Unknown command/data
 	else
 	{
 		Serial.print(type);
-		Serial.println(MSG_DATA_ERROR);
+		Serial.println(F(MSG_DATA_ERROR));
 	}
 	return x10exBufferError;
 }

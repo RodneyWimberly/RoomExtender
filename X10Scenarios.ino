@@ -1,5 +1,3 @@
-#include "Arduino.h" 
-#include "X10ex.h"
 #include "RoomExtender.h"
 
 #if ENABLE_X10_SCENARIO

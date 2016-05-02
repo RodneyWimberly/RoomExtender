@@ -1,9 +1,9 @@
 ﻿#ifndef _CONFIGREGISTER_h
 #define _CONFIGREGISTER_h
 
-#include "EEPROMex.h"
-#include "EEPROMvar.h"
-#include "Property.h"
+#include <EEPROMex.h>
+#include <EEPROMvar.h>
+#include <Property.h>
 
 #define EEPROM_MAX_ALLOWED_WRITES		20
 #define EEPROM_MEM_BASE					120
@@ -26,6 +26,7 @@ public:
 
 	ConfigRegister();
 	ConfigRegister(long defaultValue);
+	~ConfigRegister();
 	void begin();
 
 private:

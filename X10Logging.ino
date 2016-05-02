@@ -1,5 +1,3 @@
-#include "Arduino.h" 
-#include "X10ex.h"
 #include "RoomExtender.h"
 
 void printX10Message(const char type[], char house, byte unit, byte command, byte extData, byte extCommand, int remainingBits)
@@ -17,41 +15,34 @@ void printX10Message(const char type[], char house, byte unit, byte command, byt
 	}
 	else
 	{
-		Serial.print("_");
+		Serial.print(F("_"));
 	}
 	Serial.println();
 
 	// Send info via RF24L01+
-	X10Data_s x10Data;
-	x10Data.houseCode = house;
-	x10Data.unitCode = unit;
-	x10Data.commandCode = command;
-	x10Data.extendedData = extData;
-	x10Data.extendedCommand = extCommand;
+	p_x10Data.houseCode = house;
+	p_x10Data.unitCode = unit;
+	p_x10Data.commandCode = command;
+	p_x10Data.extendedData = extData;
+	p_x10Data.extendedCommand = extCommand;
 
-	RfPacket* packet = new RfPacket();
-	packet->Type = NotSet;
-	packet->SourceAddress = 0;
-	packet->DestinationAddress = 1;
-	packet->Success = true;
-	if (type == SERIAL_DATA_MSG)
+	if (strcmp(type, SERIAL_DATA_MSG) == 0)
 	{
-		packet->Type = reSerialDataEvent;
+		p_headerType = HeaderTypes::reSerialDataEvent;
 	}
-	else if (type == POWER_LINE_MSG)
+	else if (strcmp(type, POWER_LINE_MSG) == 0)
 	{
-		packet->Type = rePowerLineEvent;
+		p_headerType = HeaderTypes::rePowerLineEvent;
 	}
-	else if (type == RADIO_FREQ_MSG)
+	else if (strcmp(type, RADIO_FREQ_MSG) == 0)
 	{
-		packet->Type = reRadioFrequencyEvent;
+		p_headerType = HeaderTypes::reRadioFrequencyEvent;
 	}
-	else if (type == INFRARED_MSG)
+	else if (strcmp(type, INFRARED_MSG) == 0)
 	{
-		packet->Type = reInfaredEvent;
-	} 
-	packet->writeBody(&x10Data, sizeof(x10Data));
-	radio.sendPacket(packet);
+		p_headerType = HeaderTypes::reInfaredEvent;
+	}
+
 #if DEBUG
 	printDebugX10Message(type, house, unit, command, extData, extCommand, remainingBits);
 #endif
@@ -73,7 +64,7 @@ void printX10TypeHouseUnit(const char type[], char house, byte unit, byte comman
 	}
 	else
 	{
-		Serial.print("_");
+		Serial.print(F("_"));
 	}
 }
 
@@ -91,61 +82,22 @@ void sdPrintModuleState(char house, byte unit)
 	}
 }
 
-void wrPrintModuleState(char house, byte unit, bool printUnseenModules)
-{
-	X10state state = x10ex.getModuleState(house, unit);
-	X10info info = x10ex.getModuleInfo(house, unit);
-	X10ModuleStatus_s moduleStatus;
-
-	if (state.isSeen || printUnseenModules)
-	{
-		moduleStatus.houseCode = house;
-		moduleStatus.unitCode = unit;
-		
-		if (info.type)
-		{
-			moduleStatus.type = info.type;
-		}
-		if (strlen(info.name))
-		{
-			moduleStatus.name = info.name;
-		}
-		moduleStatus.stateIsKnown = state.isKnown;
-		if (state.isKnown)
-		{
-			moduleStatus.stateIsOn = state.isOn;
-			if (state.data)
-			{
-				moduleStatus.dimPercentage = x10ex.x10BrightnessToPercent(state.data);
-			}
-		}
-	}
-
-	RfPacket *rfPacket = new RfPacket();
-	rfPacket->Type = reX10Extended;
-	rfPacket->SourceAddress = 0;
-	rfPacket->DestinationAddress = 1;
-	rfPacket->Success = true;
-	rfPacket->writeBody(&moduleStatus, sizeof(moduleStatus));
-	radio.sendPacket(rfPacket);
-}
-
 void printX10ByteAsHex(byte data)
 {
-	Serial.print("x");
-	if (data <= 0xF) { Serial.print("0"); }
+	Serial.print(F("x"));
+	if (data <= 0xF) { Serial.print(F("0")); }
 	Serial.print(data, HEX);
 }
 
 /******************************************************************************************
-/* Debug Helpers
-/******************************************************************************************/
+Debug Helpers
+******************************************************************************************/
 
 #if DEBUG
 
 void printDebugX10Message(const char type[], char house, byte unit, byte command, byte extData, byte extCommand, int remainingBits)
 {
-	Serial.print("DEBUG=");
+	Serial.print(F("DEBUG="));
 	printX10TypeHouseUnit(type, house, unit, command);
 	switch (command)
 	{
@@ -154,36 +106,36 @@ void printDebugX10Message(const char type[], char house, byte unit, byte command
 	case 0x10:
 		break;
 	case CMD_ALL_UNITS_OFF:
-		Serial.println("_AllUnitsOff");
+		Serial.println(F("_AllUnitsOff"));
 		break;
 	case CMD_ALL_LIGHTS_ON:
-		Serial.println("_AllLightsOn");
+		Serial.println(F("_AllLightsOn"));
 		break;
 	case CMD_ON:
-		Serial.print("_On");
+		Serial.print(F("_On"));
 		printDebugX10Brightness("_Brightness", extData);
 		break;
 	case CMD_OFF:
-		Serial.print("_Off");
+		Serial.print(F("_Off"));
 		printDebugX10Brightness("_Brightness", extData);
 		break;
 	case CMD_DIM:
-		Serial.println("_Dim");
+		Serial.println(F("_Dim"));
 		break;
 	case CMD_BRIGHT:
-		Serial.println("_Bright");
+		Serial.println(F("_Bright"));
 		break;
 	case CMD_ALL_LIGHTS_OFF:
-		Serial.println("_AllLightsOff");
+		Serial.println(F("_AllLightsOff"));
 		break;
 	case CMD_EXTENDED_CODE:
-		Serial.print("_ExtendedCode");
+		Serial.print(F("_ExtendedCode"));
 		break;
 	case CMD_HAIL_REQUEST:
-		Serial.println("_HailReq");
+		Serial.println(F("_HailReq"));
 		break;
 	case CMD_HAIL_ACKNOWLEDGE:
-		Serial.println("_HailAck");
+		Serial.println(F("_HailAck"));
 		break;
 		// Enable X10_USE_PRE_SET_DIM in X10ex header file
 		// to use X10 standard message PRE_SET_DIM commands
@@ -192,19 +144,19 @@ void printDebugX10Message(const char type[], char house, byte unit, byte command
 		printDebugX10Brightness("_PreSetDim", extData);
 		break;
 	case CMD_EXTENDED_DATA:
-		Serial.print("_ExtendedData");
+		Serial.print(F("_ExtendedData"));
 		break;
 	case CMD_STATUS_ON:
-		Serial.println("_StatusOn");
+		Serial.println(F("_StatusOn"));
 		break;
 	case CMD_STATUS_OFF:
-		Serial.println("_StatusOff");
+		Serial.println(F("_StatusOff"));
 		break;
 	case CMD_STATUS_REQUEST:
-		Serial.println("_StatusReq");
+		Serial.println(F("_StatusReq"));
 		break;
 	case DATA_UNKNOWN:
-		Serial.println("_Unknown");
+		Serial.println(F("_Unknown"));
 		break;
 	default:
 		Serial.println();
@@ -217,16 +169,16 @@ void printDebugX10Message(const char type[], char house, byte unit, byte command
 			printDebugX10Brightness("_PreSetDim", extData);
 			break;
 		default:
-			Serial.print("_");
+			Serial.print(F("_"));
 			Serial.print(extCommand, HEX);
-			Serial.print("_");
+			Serial.print(F("_"));
 			Serial.println(extData, HEX);
 		}
 	}
 	if (remainingBits)
 	{
 		printX10TypeHouseUnit(type, house, unit, command);
-		Serial.print("_ErrorBitCount=");
+		Serial.print(F("_ErrorBitCount="));
 		Serial.println(remainingBits, DEC);
 	}
 }
@@ -236,7 +188,7 @@ void printDebugX10Brightness(const char source[], byte extData)
 	if (extData > 0)
 	{
 		Serial.print(source);
-		Serial.print("_");
+		Serial.print(F("_"));
 		Serial.println(x10ex.x10BrightnessToPercent(extData), DEC);
 	}
 	else
@@ -246,4 +198,5 @@ void printDebugX10Brightness(const char source[], byte extData)
 }
 
 #endif
+
 
